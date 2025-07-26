@@ -106,53 +106,14 @@ export async function GET(
 
     const processedTokens: ProcessedToken[] = [];
 
-    // Fetch both ETH balance and ERC20 tokens in parallel
-    const [ethResponse, tokensResponse] = await Promise.all([
-      // Fetch ETH balance
-      fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/balance?chainId=${BASE_CHAIN_ID}`, {
-        method: 'GET',
-        headers: {
-          'x-client-id': clientId,
-          'Content-Type': 'application/json',
-        },
-      }),
-      // Fetch ERC20 tokens
-      fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=50`, {
-        method: 'GET',
-        headers: {
-          'x-client-id': clientId,
-          'Content-Type': 'application/json',
-        },
-      })
-    ]);
-
-    // Process ETH balance
-    if (ethResponse.ok) {
-      try {
-        const ethData = await ethResponse.json();
-        const ethBalance = parseFloat(ethData.result?.displayValue || '0');
-        
-        if (ethBalance > 0.0001) {
-          // Get ETH price (you could also fetch this from a price API)
-          const ethPriceUsd = 3000; // Mock price - in production, fetch from CoinGecko/CoinMarketCap
-          
-          processedTokens.push({
-            address: "ETH",
-            symbol: "ETH", 
-            name: "Ethereum",
-            balance: ethData.result?.value || "0",
-            decimals: 18,
-            logo: "https://assets.coingecko.com/coins/images/279/thumb/ethereum.png",
-            value: ethBalance * ethPriceUsd,
-            chainId: BASE_CHAIN_ID,
-            priceUsd: ethPriceUsd,
-            balanceFormatted: ethBalance
-          });
-        }
-      } catch (ethError) {
-        console.error('Error processing ETH balance:', ethError);
-      }
-    }
+    // Fetch only ERC20 tokens (exclude ETH)
+    const tokensResponse = await fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=50`, {
+      method: 'GET',
+      headers: {
+        'x-client-id': clientId,
+        'Content-Type': 'application/json',
+      },
+    });
 
     // Process ERC20 tokens
     if (tokensResponse.ok) {
@@ -201,12 +162,11 @@ export async function GET(
     }
 
     // Handle API errors
-    if (!ethResponse.ok && !tokensResponse.ok) {
-      const ethError = await ethResponse.text();
+    if (!tokensResponse.ok) {
       const tokensError = await tokensResponse.text();
-      console.error('Both API calls failed:', { ethError, tokensError });
+      console.error('API call failed:', { tokensError });
       
-      if (ethResponse.status === 401 || tokensResponse.status === 401) {
+      if (tokensResponse.status === 401) {
         return NextResponse.json(
           { error: 'Authentication failed. Please check your client ID.' },
           { status: 401 }

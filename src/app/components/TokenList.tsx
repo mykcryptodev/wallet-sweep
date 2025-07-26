@@ -7,6 +7,10 @@ import { TokenDisplay } from "./TokenDisplay";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { ErrorDisplay } from "./ui/ErrorDisplay";
 import { EmptyState } from "./ui/EmptyState";
+import { useState, useEffect, useRef } from "react";
+
+// USDC contract address on Base
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 export default function TokenList() {
   const account = useActiveAccount();
@@ -18,6 +22,8 @@ export default function TokenList() {
     batchCalls,
     tokensToSell,
     receipt,
+    destinationToken,
+    setDestinationToken,
     prepareBatchSell,
     executeBatchTransaction,
     handleTokenSelect,
@@ -25,9 +31,37 @@ export default function TokenList() {
     resetBatch
   } = useBatchSelling(account, tokens);
 
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const handleTransactionSuccess = () => {
     refetch();
   };
+
+  const getDestinationTokenSymbol = () => {
+    return destinationToken === USDC_ADDRESS ? "USDC" : "ETH";
+  };
+
+  const handleDestinationChange = (newDestination: string) => {
+    setDestinationToken(newDestination);
+    setShowDropdown(false);
+  };
+
+
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   if (!account) {
     return (
@@ -43,14 +77,49 @@ export default function TokenList() {
 
   return (
     <div>
-      {/* Tokens Header */}
+      {/* Header with Destination Token Dropdown */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-black">Tokens</h2>
-        {totalUsdValue > 0 && (
-          <p className="text-sm text-gray-600">
-            Total: <span className="font-medium">${totalUsdValue.toFixed(2)}</span>
-          </p>
-        )}
+        <div className="flex items-center space-x-2">
+          {totalUsdValue > 0 && (
+            <p className="text-sm text-gray-600">
+              Total: <span className="font-medium">${totalUsdValue.toFixed(2)}</span>
+            </p>
+          )}
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <span>Sell to {getDestinationTokenSymbol()}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Dropdown */}
+            {showDropdown && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32" ref={dropdownRef}>
+                <button
+                  onClick={() => handleDestinationChange(USDC_ADDRESS)}
+                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
+                    destinationToken === USDC_ADDRESS ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                  }`}
+                >
+                  USDC
+                </button>
+                <button
+                  onClick={() => handleDestinationChange("ETH")}
+                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
+                    destinationToken === "ETH" ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                  }`}
+                >
+                  ETH
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       
       {/* Token List */}

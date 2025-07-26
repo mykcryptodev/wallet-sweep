@@ -13,7 +13,8 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
   const [preparing, setPreparing] = useState(false);
   const [batchCalls, setBatchCalls] = useState<Call[]>([]);
-  const [tokensToSell, setTokensToSell] = useState<ProcessedToken[]>([]);
+    const [tokensToSell, setTokensToSell] = useState<ProcessedToken[]>([]);
+  const [destinationToken, setDestinationToken] = useState<string>(USDC_ADDRESS);
 
   // Use thirdweb's useSendCalls hook for EIP-5792 batch transactions
   const { mutate: sendCalls, isPending: executing, data: sendCallsData } = useSendCalls();
@@ -21,15 +22,16 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
   // Wait for the calls receipt to get transaction status
   const { data: receipt, isLoading: isConfirming } = useWaitForCallsReceipt(sendCallsData);
 
-  const getSellQuote = async (fromToken: ProcessedToken, toToken: string = USDC_ADDRESS) => {
+  const getSellQuote = async (fromToken: ProcessedToken, toToken: string = destinationToken) => {
     try {
-      const originTokenAddress = fromToken.address === "ETH" ? NATIVE_TOKEN_ADDRESS : fromToken.address;
+      const originTokenAddress = fromToken.address;
+      const destinationTokenAddress = toToken === "ETH" ? NATIVE_TOKEN_ADDRESS : toToken;
       
       const preparedQuote = await Bridge.Sell.prepare({
         originChainId: base.id,
         originTokenAddress,
         destinationChainId: base.id,
-        destinationTokenAddress: toToken,
+        destinationTokenAddress,
         amount: BigInt(fromToken.balance),
         sender: account?.address!,
         receiver: account?.address!,
@@ -177,6 +179,8 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     batchCalls,
     tokensToSell,
     receipt,
+    destinationToken,
+    setDestinationToken,
     prepareBatchSell,
     executeBatchTransaction,
     handleTokenSelect,
