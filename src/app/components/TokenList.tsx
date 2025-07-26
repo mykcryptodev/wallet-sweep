@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useActiveAccount, TransactionButton } from "thirdweb/react";
-import { defineChain, getContract, NATIVE_TOKEN_ADDRESS, prepareTransaction, sendBatchTransaction } from "thirdweb";
+import { useActiveAccount } from "thirdweb/react";
+import { NATIVE_TOKEN_ADDRESS, prepareTransaction, sendBatchTransaction } from "thirdweb";
 import { client } from "../client";
 import { Bridge } from "thirdweb";
-import { approve } from "thirdweb/extensions/erc20";
+import { base } from "thirdweb/chains";
 import { TokenProvider, TokenIcon, TokenSymbol } from "thirdweb/react";
-
-// Define Base mainnet chain
-const baseMainnet = defineChain(8453);
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -96,7 +93,7 @@ function TokenDisplay({
 
   if (shouldUseTokenProvider) {
     return (
-      <TokenProvider address={tokenAddress} chain={baseMainnet} client={client}>
+      <TokenProvider address={tokenAddress} chain={base} client={client}>
         <div
           className={`flex items-center p-3 rounded-xl border-2 transition-colors cursor-pointer ${
             isSelected
@@ -237,7 +234,7 @@ export default function TokenList() {
       const preparedTransactions = encodedCalls.map(call =>
         prepareTransaction({
           client,
-          chain: baseMainnet,
+          chain: base,
           to: call.to as `0x${string}`,
           data: call.data as `0x${string}`,
           value: BigInt(call.value),
@@ -338,9 +335,9 @@ export default function TokenList() {
       
       // Use Bridge.Sell.prepare to prepare the sell transaction
       const preparedQuote = await Bridge.Sell.prepare({
-        originChainId: baseMainnet.id,
+        originChainId: base.id,
         originTokenAddress,
-        destinationChainId: baseMainnet.id, // Same chain for Base -> Base
+        destinationChainId: base.id, // Same chain for Base -> Base
         destinationTokenAddress: toToken,
         amount: BigInt(fromToken.balance), // Use the wei amount from our API
         sender: account?.address!,
