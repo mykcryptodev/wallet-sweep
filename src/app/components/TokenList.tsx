@@ -7,13 +7,13 @@ import { TokenDisplay } from "./TokenDisplay";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { ErrorDisplay } from "./ui/ErrorDisplay";
 import { EmptyState } from "./ui/EmptyState";
+import TradeSummaryModal from "./TradeSummaryModal";
 import { useState, useEffect, useRef } from "react";
 import { NATIVE_TOKEN_ADDRESS } from "thirdweb";
 import { theme } from "../lib/theme";
+import { isAddressEqual } from "../lib/address";
 import Link from "next/link";
-
-// USDC contract address on Base
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+import { USDC } from "../constants";
 
 export default function TokenList() {
   const account = useActiveAccount();
@@ -34,7 +34,10 @@ export default function TokenList() {
     setDestinationToken,
     executeBatchSell,
     handleTokenSelect,
-    calculateTotalValue
+    calculateTotalValue,
+    tradeSummary,
+    showTradeModal,
+    closeTradeModal
   } = useBatchSelling(account, tokens);
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -46,7 +49,7 @@ export default function TokenList() {
   };
 
   const getDestinationTokenSymbol = () => {
-    return destinationToken === USDC_ADDRESS ? "USDC" : "ETH";
+    return isAddressEqual(destinationToken, USDC) ? "USDC" : "ETH";
   };
 
   const handleDestinationChange = (newDestination: string) => {
@@ -110,9 +113,9 @@ export default function TokenList() {
             {showDropdown && (
               <div className={`absolute top-full right-0 mt-1 rounded-lg shadow-lg z-10 min-w-32 ${theme.dropdown.background} ${theme.dropdown.border}`} ref={dropdownRef}>
                 <button
-                  onClick={() => handleDestinationChange(USDC_ADDRESS)}
+                  onClick={() => handleDestinationChange(USDC)}
                   className={`w-full px-4 py-2 text-left transition-colors ${
-                    destinationToken === USDC_ADDRESS 
+                    destinationToken === USDC 
                       ? theme.dropdown.item.selected
                       : theme.dropdown.item.unselected
                   }`}
@@ -155,20 +158,6 @@ export default function TokenList() {
         )}
       </div>
 
-      {/* Success Message */}
-      {receipt && (
-        <div className={`text-sm text-center p-2 rounded-lg mb-3 ${theme.status.success}`}>
-          <Link
-            href={`https://basescan.org/tx/${receipt.receipts?.[0]?.transactionHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:no-underline font-medium"
-          >
-            View transaction
-          </Link>
-        </div>
-      )}
-
       {/* Sell Button */}
       <button
         onClick={() => executeBatchSell(handleTransactionSuccess)}
@@ -190,6 +179,18 @@ export default function TokenList() {
           `Sell ${selectedTokens.size} Token${selectedTokens.size > 1 ? 's' : ''} for $${calculateTotalValue().toFixed(2)}`
         )}
       </button>
+
+      {/* Trade Summary Modal */}
+      {tradeSummary && (
+        <TradeSummaryModal
+          isOpen={showTradeModal}
+          onClose={closeTradeModal}
+          successfulTokens={tradeSummary.successfulTokens}
+          failedTokens={tradeSummary.failedTokens}
+          transactionHash={tradeSummary.transactionHash}
+          destinationToken={destinationToken}
+        />
+      )}
     </div>
   );
 } 

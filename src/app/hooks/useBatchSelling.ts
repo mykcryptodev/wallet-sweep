@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NATIVE_TOKEN_ADDRESS, prepareTransaction } from "thirdweb";
 import { useSendCalls, useWaitForCallsReceipt } from "thirdweb/react";
 import { client } from "../client";
@@ -7,14 +7,20 @@ import { base } from "thirdweb/chains";
 import { ProcessedToken, Call } from "../types/token";
 import { useCache } from "./useCache";
 import { toast } from "react-toastify";
+import { USDC } from "../constants";
 
-// USDC contract address on Base
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+export interface TradeSummary {
+  successfulTokens: ProcessedToken[];
+  failedTokens: ProcessedToken[];
+  transactionHash?: string;
+}
 
 export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState(false);
-  const [destinationToken, setDestinationToken] = useState<string>(USDC_ADDRESS);
+  const [destinationToken, setDestinationToken] = useState<string>(USDC);
+  const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
+  const [showTradeModal, setShowTradeModal] = useState(false);
   
   // Cache utilities
   const { invalidateWalletCache } = useCache();
@@ -141,16 +147,15 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
         onSuccess: async (data) => {
           console.log("Batch transaction sent successfully:", data);
           
-          // Show success message with details about what was sold
-          const soldTokens = successfulQuotes.map(({ token }) => token.symbol).join(", ");
-          const successMessage = `Successfully initiated batch sell for ${successfulQuotes.length} tokens: ${soldTokens}! 🎉`;
+          // Create trade summary for modal
+          const summary: TradeSummary = {
+            successfulTokens: successfulQuotes.map(({ token }) => token),
+            failedTokens: failedQuotesForMessage,
+            transactionHash: undefined // Will be updated when receipt is available
+          };
           
-          if (failedQuotesForMessage.length > 0) {
-            const failedSymbols = failedQuotesForMessage.map(token => token.symbol).join(", ");
-            toast.success(`${successMessage} (Skipped: ${failedSymbols})`);
-          } else {
-            toast.success(successMessage);
-          }
+          setTradeSummary(summary);
+          setShowTradeModal(true);
           
           // Invalidate cache after successful sell
           try {
@@ -200,6 +205,21 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
       .reduce((sum, token) => sum + token.value, 0);
   };
 
+  const closeTradeModal = () => {
+    setShowTradeModal(false);
+    setTradeSummary(null);
+  };
+
+  // Update trade summary with transaction hash when receipt is available
+  useEffect(() => {
+    if (receipt && tradeSummary && !tradeSummary.transactionHash) {
+      setTradeSummary({
+        ...tradeSummary,
+        transactionHash: receipt.receipts?.[0]?.transactionHash
+      });
+    }
+  }, [receipt, tradeSummary]);
+
   return {
     selectedTokens,
     processing: processing || executing || isConfirming,
@@ -208,6 +228,9 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     setDestinationToken,
     executeBatchSell,
     handleTokenSelect,
-    calculateTotalValue
+    calculateTotalValue,
+    tradeSummary,
+    showTradeModal,
+    closeTradeModal
   };
 }; 
