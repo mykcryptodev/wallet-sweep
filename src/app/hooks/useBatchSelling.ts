@@ -72,22 +72,42 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     try {
       console.log(`Preparing to sell ${tokensToSell.length} tokens in a single batch transaction...`);
       
+      // Fetch quotes for all tokens in parallel
+      console.log(`Fetching quotes for ${tokensToSell.length} tokens in parallel...`);
+      const quotePromises = tokensToSell.map(async (token) => {
+        try {
+          console.log(`Getting quote for ${token.symbol}...`);
+          const quote = await getSellQuote(token);
+          return { token, quote, success: true };
+        } catch (error) {
+          console.warn(`Failed to get sell quote for ${token.symbol}:`, error);
+          return { token, quote: null, success: false, error };
+        }
+      });
+
+      // Wait for all quotes to complete (success or failure)
+      const quoteResults = await Promise.allSettled(quotePromises);
+      
+      // Process results
       const quotesWithTokens: { token: ProcessedToken; quote: any }[] = [];
       const failedQuotes: ProcessedToken[] = [];
       
-      // Get quotes for all tokens, tracking which ones fail
-      for (const token of tokensToSell) {
-        console.log(`Getting quote for ${token.symbol}...`);
-        const quote = await getSellQuote(token);
-        
-        if (!quote) {
-          console.warn(`Failed to get sell quote for ${token.symbol}`);
+      quoteResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const { token, quote, success } = result.value;
+          if (success && quote) {
+            quotesWithTokens.push({ token, quote });
+          } else {
+            failedQuotes.push(token);
+            toast.warning(`Could not get quote for ${token.symbol} - it will be skipped`);
+          }
+        } else {
+          // Handle rejected promises
+          const token = tokensToSell[index];
           failedQuotes.push(token);
           toast.warning(`Could not get quote for ${token.symbol} - it will be skipped`);
-        } else {
-          quotesWithTokens.push({ token, quote });
         }
-      }
+      });
 
       // If no quotes succeeded, show error and return
       if (quotesWithTokens.length === 0) {
