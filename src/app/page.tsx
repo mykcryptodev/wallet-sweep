@@ -21,6 +21,7 @@ import { useTokenMarketData } from "./hooks/useTokenMarketData";
 import { PriceChart } from "./components/PriceChart";
 import { toTokens } from "thirdweb";
 import HamburgerNav from "./components/HamburgerNav";
+import { useFarcaster } from "./providers/FarcasterProvider";
 
 // Dynamic Background Component
 function DynamicBackground({ token }: { token: any }) {
@@ -87,12 +88,8 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
   // Fetch market data from Zapper
   const { data: marketData, loading: marketLoading } = useTokenMarketData(token.address);
 
-  // Haptic feedback function
-  const triggerHaptic = () => {
-    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
-      navigator.vibrate(50);
-    }
-  };
+  // Use Farcaster SDK haptic feedback
+  const { triggerHaptic } = useFarcaster();
 
   // Calculate velocity
   const calculateVelocity = (currentPos: { x: number, y: number }, currentTime: number) => {
