@@ -93,6 +93,14 @@ You can customize the mini app appearance by:
 2. Updating the splash icon in `/api/splash-icon/route.tsx`
 3. Changing colors and text in the embed configuration
 
+### 5. Add Base App Metadata
+
+Base App extends the Farcaster manifest with extra fields to improve discovery.
+Add `screenshotUrls`, `primaryCategory`, `tags`, `heroImageUrl`, `tagline`,
+`ogTitle`, `ogDescription`, and `ogImageUrl` to `/public/.well-known/farcaster.json`.
+See [Base docs](https://docs.base.org/base-app/introduction/mini-apps) for details.
+
+
 ## Testing
 
 To test your mini app integration:

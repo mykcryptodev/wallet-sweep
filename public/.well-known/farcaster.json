@@ -13,6 +13,22 @@
     "buttonTitle": "🧹 Sweep Wallet",
     "splashImageUrl": "https://wallet-sweep.vercel.app/api/splash-icon",
     "splashBackgroundColor": "#1a1a1a",
-    "webhookUrl": "https://wallet-sweep.vercel.app/api/webhook"
+    "webhookUrl": "https://wallet-sweep.vercel.app/api/webhook",
+    "screenshotUrls": [
+      "https://wallet-sweep.vercel.app/screenshot1.png"
+    ],
+    "primaryCategory": "finance",
+    "tags": [
+      "wallet",
+      "sweep",
+      "tokens",
+      "sell",
+      "batch"
+    ],
+    "heroImageUrl": "https://wallet-sweep.vercel.app/api/og",
+    "tagline": "Batch sell tokens easily",
+    "ogTitle": "Wallet Sweep",
+    "ogDescription": "Batch sell tokens from your wallet on Base",
+    "ogImageUrl": "https://wallet-sweep.vercel.app/api/og"
   }
 }
