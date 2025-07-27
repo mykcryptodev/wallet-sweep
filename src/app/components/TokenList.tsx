@@ -17,18 +17,13 @@ export default function TokenList() {
   const { tokens, loading, error, hasAttemptedFetch, totalUsdValue, retry, refetch } = useTokenBalances(account?.address);
   const {
     selectedTokens,
-    preparing,
-    executing,
-    batchCalls,
-    tokensToSell,
+    processing,
     receipt,
     destinationToken,
     setDestinationToken,
-    prepareBatchSell,
-    executeBatchTransaction,
+    executeBatchSell,
     handleTokenSelect,
-    calculateTotalValue,
-    resetBatch
+    calculateTotalValue
   } = useBatchSelling(account, tokens);
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -46,8 +41,6 @@ export default function TokenList() {
     setDestinationToken(newDestination);
     setShowDropdown(false);
   };
-
-
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -140,67 +133,34 @@ export default function TokenList() {
         )}
       </div>
 
-      {/* Sell Buttons */}
-      {batchCalls.length === 0 ? (
-        <button
-          onClick={prepareBatchSell}
-          disabled={selectedTokens.size === 0 || preparing}
-          className={`w-full py-4 rounded-2xl font-semibold text-white transition-colors relative ${
-            selectedTokens.size === 0 || preparing
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600"
-          }`}
-        >
-          {preparing ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Preparing batch...
-            </div>
-          ) : selectedTokens.size === 0 ? (
-            "Select tokens to sell"
-          ) : (
-            `Prepare Sell ${selectedTokens.size} Token${selectedTokens.size > 1 ? 's' : ''} for $${calculateTotalValue().toFixed(2)}`
-          )}
-        </button>
-      ) : (
-        <div className="space-y-3">
-          <div className="text-sm text-gray-600 text-center">
-            Ready to sell {tokensToSell.length} tokens in 1 batch transaction ({batchCalls.length} calls)
-          </div>
-          
-          {receipt && (
-            <div className="text-sm text-green-600 text-center bg-green-50 p-2 rounded-lg">
-              Transaction confirmed! Hash: {receipt.receipts?.[0]?.transactionHash?.slice(0, 10)}...
-            </div>
-          )}
-          
-          <button
-            onClick={() => executeBatchTransaction(handleTransactionSuccess)}
-            disabled={executing}
-            className={`w-full py-4 rounded-2xl font-semibold text-white transition-colors ${
-              executing
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600"
-            }`}
-          >
-            {executing ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                {receipt ? "Confirming transaction..." : "Executing batch..."}
-              </div>
-            ) : (
-              `Execute Batch Sell (${batchCalls.length} calls in 1 transaction)`
-            )}
-          </button>
-          
-          <button
-            onClick={resetBatch}
-            className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
-          >
-            Cancel and prepare again
-          </button>
+      {/* Success Message */}
+      {receipt && (
+        <div className="text-sm text-green-600 text-center bg-green-50 p-2 rounded-lg mb-3">
+          Transaction confirmed! Hash: {receipt.receipts?.[0]?.transactionHash?.slice(0, 10)}...
         </div>
       )}
+
+      {/* Sell Button */}
+      <button
+        onClick={() => executeBatchSell(handleTransactionSuccess)}
+        disabled={selectedTokens.size === 0 || processing}
+        className={`w-full py-4 rounded-2xl font-semibold text-white transition-colors relative ${
+          selectedTokens.size === 0 || processing
+            ? "bg-gray-300 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600"
+        }`}
+      >
+        {processing ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+            {receipt ? "Confirming transaction..." : "Preparing and executing batch..."}
+          </div>
+        ) : selectedTokens.size === 0 ? (
+          "Select tokens to sell"
+        ) : (
+          `Sell ${selectedTokens.size} Token${selectedTokens.size > 1 ? 's' : ''} for $${calculateTotalValue().toFixed(2)}`
+        )}
+      </button>
     </div>
   );
 } 

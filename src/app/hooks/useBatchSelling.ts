@@ -11,9 +11,7 @@ const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
-  const [preparing, setPreparing] = useState(false);
-  const [batchCalls, setBatchCalls] = useState<Call[]>([]);
-    const [tokensToSell, setTokensToSell] = useState<ProcessedToken[]>([]);
+  const [processing, setProcessing] = useState(false);
   const [destinationToken, setDestinationToken] = useState<string>(USDC_ADDRESS);
 
   // Use thirdweb's useSendCalls hook for EIP-5792 batch transactions
@@ -45,26 +43,26 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     }
   };
 
-  const prepareBatchSell = async () => {
+  const executeBatchSell = async (onSuccess: () => void) => {
     if (!account) return;
     
-    setPreparing(true);
+    setProcessing(true);
     const selectedTokensList = tokens.filter(token => selectedTokens.has(token.address));
-    const tokensToSellList = selectedTokensList.filter(token => 
+    const tokensToSell = selectedTokensList.filter(token => 
       token.symbol !== "USDC" && token.symbol !== "USDbC"
     );
 
-    if (tokensToSellList.length === 0) {
+    if (tokensToSell.length === 0) {
       alert("No tokens to sell - all selected tokens are already USDC!");
-      setPreparing(false);
+      setProcessing(false);
       return;
     }
 
     try {
-      console.log(`Preparing to sell ${tokensToSellList.length} tokens in a single batch transaction...`);
+      console.log(`Preparing to sell ${tokensToSell.length} tokens in a single batch transaction...`);
       
       const quotesWithTokens = [];
-      for (const token of tokensToSellList) {
+      for (const token of tokensToSell) {
         console.log(`Getting quote for ${token.symbol}...`);
         const quote = await getSellQuote(token);
         
@@ -96,23 +94,8 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
 
       console.log(`Prepared ${calls.length} total calls (approvals + swaps) for batching`);
 
-      setBatchCalls(calls);
-      setTokensToSell(tokensToSellList);
-      
-    } catch (error) {
-      console.error("Error preparing batch sell:", error);
-      alert(`Error preparing batch sell: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setPreparing(false);
-    }
-  };
-
-  const executeBatchTransaction = async (onSuccess: () => void) => {
-    if (!account || batchCalls.length === 0) return;
-
-    try {
       // Prepare the calls for useSendCalls
-      const preparedCalls = batchCalls.map(call =>
+      const preparedCalls = calls.map(call =>
         prepareTransaction({
           client,
           chain: base,
@@ -134,8 +117,6 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
           
           // Reset state
           setSelectedTokens(new Set());
-          setBatchCalls([]);
-          setTokensToSell([]);
           
           onSuccess();
         },
@@ -148,6 +129,8 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     } catch (error) {
       console.error("Error preparing batch transaction:", error);
       alert(`Error preparing batch transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -167,24 +150,14 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
       .reduce((sum, token) => sum + token.value, 0);
   };
 
-  const resetBatch = () => {
-    setBatchCalls([]);
-    setTokensToSell([]);
-  };
-
   return {
     selectedTokens,
-    preparing,
-    executing: executing || isConfirming,
-    batchCalls,
-    tokensToSell,
+    processing: processing || executing || isConfirming,
     receipt,
     destinationToken,
     setDestinationToken,
-    prepareBatchSell,
-    executeBatchTransaction,
+    executeBatchSell,
     handleTokenSelect,
-    calculateTotalValue,
-    resetBatch
+    calculateTotalValue
   };
 }; 
