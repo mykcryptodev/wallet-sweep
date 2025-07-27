@@ -71,9 +71,10 @@ interface TokenCardProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   isVisible: boolean;
+  isSelected: boolean;
 }
 
-function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardProps) {
+function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: TokenCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -199,7 +200,16 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary} flex flex-col`}>
+      <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary} flex flex-col relative`}>
+        {/* Selection indicator */}
+        {isSelected && (
+          <div className="absolute top-4 right-4 z-20">
+            <div className="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+              <span className="text-sm font-bold">×</span>
+            </div>
+          </div>
+        )}
+        
         {/* Token Header with Dynamic Background */}
         <div className="relative min-h-56 overflow-hidden flex-shrink-0 flex items-center justify-center">
           {/* Dynamic background based on token image */}
@@ -301,7 +311,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white"
               >
-                Sell
+                {isSelected ? 'Selected' : 'Sell'}
               </button>
               <button
                 onClick={(e) => {
@@ -347,85 +357,6 @@ export default function SwipePage() {
     closeTradeModal
   } = useBatchSelling(account, tokens);
 
-  // Get the sendCalls function at component level
-  const { mutate: sendCalls } = useSendCalls();
-
-  // Create a direct sell function for individual tokens
-  const sellSingleToken = async (token: any) => {
-    // Skip USDC tokens
-    if (token.symbol === "USDC" || token.symbol === "USDbC") {
-      toast.warning("Cannot sell USDC tokens");
-      return;
-    }
-    
-    // Skip tokens with zero value
-    if (token.value === 0) {
-      toast.warning(`${token.symbol} has no value to sell`);
-      return;
-    }
-    
-    try {
-      // Set selling state
-      setSellingToken(token.address);
-      
-      // Get sell quote using Bridge
-      const preparedQuote = await Bridge.Sell.prepare({
-        originChainId: base.id,
-        originTokenAddress: token.address,
-        destinationChainId: base.id,
-        destinationTokenAddress: USDC, // Sell to USDC
-        amount: BigInt(token.balance),
-        sender: account?.address!,
-        receiver: account?.address!,
-        client,
-      });
-      
-      // Execute the sell transaction
-      const calls: { to: string; data: string; value: string }[] = [];
-      for (const step of preparedQuote.steps) {
-        for (const transaction of step.transactions) {
-          calls.push({
-            to: transaction.to,
-            data: transaction.data,
-            value: transaction.value ? transaction.value.toString() : "0"
-          });
-        }
-      }
-      
-      // Send the transaction
-      await new Promise((resolve, reject) => {
-        sendCalls({
-          calls: calls.map(call =>
-            prepareTransaction({
-              client,
-              chain: base,
-              to: call.to as `0x${string}`,
-              data: call.data as `0x${string}`,
-              value: BigInt(call.value || "0"),
-            })
-          ),
-        }, {
-          onSuccess: () => resolve(undefined),
-          onError: (error) => reject(error)
-        });
-      });
-      
-      toast.success(`Successfully sold ${token.symbol} for $${token.value.toFixed(2)}`);
-      
-      // Refresh token list
-      invalidateCacheAndRefetch();
-      
-    } catch (error) {
-      console.error('❌ Error selling token:', error);
-      toast.error(`Failed to sell ${token.symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setSellingToken(null);
-    }
-  };
-
-  // Individual token selling state
-  const [sellingToken, setSellingToken] = useState<string | null>(null);
-
   const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
 
   // Filter out native tokens and USDC
@@ -445,7 +376,7 @@ export default function SwipePage() {
     }
   }, [currentTokenIndex, swipeableTokens.length, hasMore, loadingMore, loadMore]);
 
-  const handleSwipeLeft = async () => {
+  const handleSwipeLeft = () => {
     if (currentTokenIndex >= swipeableTokens.length) return;
     
     const currentToken = swipeableTokens[currentTokenIndex];
@@ -456,20 +387,11 @@ export default function SwipePage() {
       return;
     }
     
-    // Sell the token immediately
-    setSellingToken(currentToken.address);
+    // Add token to batch for selling
+    handleTokenSelect(currentToken.address);
     
-    try {
-      // Use the custom sell function
-      await sellSingleToken(currentToken);
-      
-      // Move to next token
-      setCurrentTokenIndex(prev => prev + 1);
-    } catch (error) {
-      console.error('Error selling token:', error);
-    } finally {
-      setSellingToken(null);
-    }
+    // Move to next token
+    setCurrentTokenIndex(prev => prev + 1);
   };
 
   const handleSwipeRight = () => {
@@ -477,7 +399,21 @@ export default function SwipePage() {
     setCurrentTokenIndex(prev => prev + 1);
   };
 
-  // Remove the batch sell function since we're selling individually now
+  const handleBatchSell = async () => {
+    if (selectedTokens.size === 0) {
+      toast.warning("No tokens selected for selling");
+      return;
+    }
+
+    try {
+      await executeBatchSell(() => {
+        // Refresh token list after successful sell
+        invalidateCacheAndRefetch();
+      });
+    } catch (error) {
+      console.error('Error executing batch sell:', error);
+    }
+  };
 
   const handleReset = () => {
     setCurrentTokenIndex(0);
@@ -544,6 +480,7 @@ export default function SwipePage() {
 
   const currentToken = swipeableTokens[currentTokenIndex];
   const isFinished = currentTokenIndex >= swipeableTokens.length;
+  const isCurrentTokenSelected = currentToken ? selectedTokens.has(currentToken.address) : false;
 
   return (
     <main className={`min-h-screen ${theme.background.primary}`}>
@@ -585,6 +522,7 @@ export default function SwipePage() {
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
               isVisible={true}
+              isSelected={isCurrentTokenSelected}
             />
           ) : null}
         </div>
@@ -602,27 +540,49 @@ export default function SwipePage() {
               )}
             </span>
             <span className={theme.text.secondary}>
-              Swipe left to sell, right to keep
+              Swipe left to select, right to keep
             </span>
           </div>
 
-          {/* Go Back Button */}
-          {currentTokenIndex > 0 && (
-            <div className="mb-4">
+          {/* Action Buttons */}
+          <div className="flex space-x-4 mb-4">
+            {/* Go Back Button */}
+            {currentTokenIndex > 0 && (
               <button
                 onClick={() => setCurrentTokenIndex(prev => prev - 1)}
-                disabled={sellingToken !== null}
-                className={`w-full py-3 px-4 rounded-xl font-semibold transition-colors ${
-                  sellingToken !== null 
+                disabled={processing}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${
+                  processing 
                     ? theme.button.disabled 
                     : 'bg-gray-600 hover:bg-gray-700 text-white'
                 }`}
               >
                 ← Go Back
               </button>
+            )}
+
+            {/* Sell Button */}
+            {selectedTokens.size > 0 && (
+              <button
+                onClick={handleBatchSell}
+                disabled={processing}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${
+                  processing 
+                    ? theme.button.disabled 
+                    : 'bg-red-500 hover:bg-red-600 text-white'
+                }`}
+              >
+                {processing ? 'Selling...' : `Sell ${selectedTokens.size} Token${selectedTokens.size !== 1 ? 's' : ''}`}
+              </button>
+            )}
+          </div>
+
+          {/* Selected tokens count */}
+          {selectedTokens.size > 0 && (
+            <div className={`text-center py-2 rounded-lg ${theme.background.secondary} ${theme.text.secondary}`}>
+              {selectedTokens.size} token{selectedTokens.size !== 1 ? 's' : ''} selected for selling
             </div>
           )}
-
 
           {/* Loading more indicator */}
           {loadingMore && (
@@ -630,16 +590,6 @@ export default function SwipePage() {
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Loading more tokens...
-              </div>
-            </div>
-          )}
-
-          {/* Individual selling status */}
-          {sellingToken && (
-            <div className={`w-full py-4 rounded-2xl font-semibold transition-colors relative ${theme.button.disabled}`}>
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Selling token...
               </div>
             </div>
           )}
