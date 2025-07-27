@@ -1,137 +1,101 @@
 
 ![tw-banner](https://github.com/thirdweb-example/next-starter/assets/57885104/20c8ce3b-4e55-4f10-ae03-2fe4743a5ee8)
 
-# Wallet Sweep
+# Wallet Sweep - Farcaster Mini App
 
-A decentralized app that allows users to select tokens in their wallet and sell them to USDC on Base mainnet (chain ID 8453). Built with Next.js, Thirdweb v5, and Tailwind CSS.
+A Farcaster mini app that allows users to easily batch sell multiple tokens from their wallet in one transaction. Built with Next.js, Thirdweb, and Base chain.
 
 ## Features
 
-- 🔗 **Wallet Connection**: Connect with MetaMask, WalletConnect, and other popular wallets
-- 🏦 **Base Mainnet Support**: Specifically designed for Base (chain ID 8453)
-- 💰 **Token Selection**: Select multiple tokens from your wallet with checkboxes
-- 🔄 **Token Swapping**: Swap selected tokens to USDC using Thirdweb Pay
-- 📱 **Mobile-First Design**: Beautiful and responsive UI matching the provided design
-- ⚡ **Real-time Balance**: Automatically fetch and display your token balances
+- 🧹 **Batch Token Selling**: Select multiple tokens and sell them all in one transaction
+- 🚀 **Farcaster Mini App**: Fully integrated as a Farcaster mini app with embeds and manifest
+- ⚡ **Optimized Performance**: Includes caching, pagination, and parallel quote fetching
+- 🎨 **Beautiful UI**: Clean interface with loading states, error handling, and toast notifications
+- 🔄 **Real-time Updates**: Automatic balance refresh after successful transactions
 
-## Supported Tokens
+## Farcaster Mini App Integration
 
-- ETH (Native Ethereum)
-- WETH (Wrapped Ether)
-- USDbC (USD Base Coin)
-- DAI (Dai Stablecoin)
-- AERO (Aerodrome Finance)
+This app is fully configured as a Farcaster mini app with:
 
-## Prerequisites
+- **Mini App Embeds**: OpenGraph metadata for sharing in Farcaster feeds
+- **Dynamic Images**: Auto-generated OG images and splash icons
+- **Manifest File**: Located at `/.well-known/farcaster.json`
+- **Webhook Support**: Ready to handle mini app events
 
-1. **Thirdweb Client ID**: Get your client ID from [Thirdweb Portal](https://portal.thirdweb.com/)
-2. **Base Mainnet RPC**: The app uses Base mainnet (chain ID 8453)
-3. **Wallet with Base tokens**: Make sure you have tokens on Base mainnet
+See [docs/FARCASTER_MINIAPP_INTEGRATION.md](docs/FARCASTER_MINIAPP_INTEGRATION.md) for setup details.
 
 ## Getting Started
 
-### 1. Clone the repository
+### Prerequisites
 
-\`\`\`bash
-git clone <your-repo-url>
+- Node.js 18+ and npm
+- A Thirdweb client ID (get one at [portal.thirdweb.com](https://portal.thirdweb.com/))
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/wallet-sweep.git
 cd wallet-sweep
-\`\`\`
+```
 
-### 2. Install dependencies
-
-\`\`\`bash
+2. Install dependencies:
+```bash
 npm install
-# or
-yarn install
-\`\`\`
+```
 
-### 3. Set up environment variables
+3. Configure environment variables:
+```bash
+cp .env.local.example .env.local
+```
 
-Create a \`.env.local\` file in the root directory:
+Then edit `.env.local` and add your credentials:
+- `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` (required)
+- Redis credentials (optional, for caching)
+- 1inch API key (optional, for quote fetching)
 
-\`\`\`env
-NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_client_id_here
-\`\`\`
-
-Get your client ID from [Thirdweb Portal](https://portal.thirdweb.com/):
-1. Go to https://portal.thirdweb.com/
-2. Create a new project or select an existing one
-3. Copy your Client ID from the project dashboard
-
-### 4. Run the development server
-
-\`\`\`bash
+4. Run the development server:
+```bash
 npm run dev
-# or
-yarn dev
-\`\`\`
+```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-## How to Use
+### Deployment
 
-1. **Connect Wallet**: Click the "Connect Wallet" button and connect your preferred wallet
-2. **Switch to Base**: Make sure you're connected to Base mainnet (chain ID 8453)
-3. **View Tokens**: Your available tokens will be displayed with their balances and USD values
-4. **Select Tokens**: Click on the tokens you want to sell (checkboxes will be selected)
-5. **Sell Tokens**: Click the blue "Sell X Tokens for $X" button to execute the swap
+Deploy to Vercel or any platform that supports Next.js:
 
-## Technical Details
+```bash
+npm run build
+npm start
+```
 
-### Architecture
+Remember to:
+1. Set your environment variables in the deployment platform
+2. Update all domain references if not using `wallet-sweep.vercel.app`
+3. Complete the Farcaster account association in the manifest
 
-- **Frontend**: Next.js 14 with TypeScript
-- **Styling**: Tailwind CSS
-- **Web3 Integration**: Thirdweb v5 SDK
-- **Chain**: Base mainnet (8453)
-- **Target Token**: USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
+## Technical Documentation
 
-### Key Components
+- [Farcaster Mini App Integration](docs/FARCASTER_MINIAPP_INTEGRATION.md)
+- [Caching System](docs/CACHING_SYSTEM.md)
+- [Token Image Cache](docs/TOKEN_IMAGE_CACHE.md)
+- [Pagination Implementation](docs/PAGINATION_IMPLEMENTATION.md)
+- [Trade Summary Modal](docs/TRADE_SUMMARY_MODAL.md)
 
-- \`page.tsx\`: Main app component with wallet connection
-- \`components/TokenList.tsx\`: Token selection and selling interface
-- \`client.ts\`: Thirdweb client configuration
+## Architecture
 
-### API Integration
-
-The app uses Thirdweb's Pay API for token swapping:
-- \`getBuyWithCryptoQuote\`: Gets swap quotes for token-to-USDC conversion
-- \`approve\`: Approves ERC20 token spending
-- \`sendTransaction\`: Executes blockchain transactions
-
-## Deployment
-
-### Deploy on Vercel
-
-1. Push your code to GitHub
-2. Connect your repository to [Vercel](https://vercel.com)
-3. Add your environment variables in the Vercel dashboard
-4. Deploy!
-
-### Environment Variables for Production
-
-Make sure to set these in your deployment platform:
-
-\`\`\`
-NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_production_client_id
-\`\`\`
+The app uses:
+- **Next.js 14** with App Router
+- **Thirdweb SDK** for Web3 functionality
+- **Base Chain** for transactions
+- **Redis** for caching (optional)
+- **1inch API** for token quotes
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (\`git checkout -b feature/amazing-feature\`)
-3. Commit your changes (\`git commit -m 'Add amazing feature'\`)
-4. Push to the branch (\`git push origin feature/amazing-feature\`)
-5. Open a Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License.
-
-## Support
-
-For support, please open an issue on GitHub or contact the development team.
-
-## Disclaimer
-
-This is a demo application. Always verify transactions and amounts before confirming any swaps. Use at your own risk.
+MIT License - see LICENSE file for details
