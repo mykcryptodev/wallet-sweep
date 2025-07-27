@@ -20,6 +20,8 @@ import { toast } from "react-toastify";
 import { Bridge } from "thirdweb";
 import { useSendCalls } from "thirdweb/react";
 import { prepareTransaction } from "thirdweb";
+import { useTokenMarketData } from "../hooks/useTokenMarketData";
+import { PriceChart } from "../components/PriceChart";
 
 interface TokenCardProps {
   token: any;
@@ -33,6 +35,9 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Fetch market data from Zapper
+  const { data: marketData, loading: marketLoading } = useTokenMarketData(token.address);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -96,6 +101,21 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
     return 1 - Math.abs(dragOffset.x) / 300;
   };
 
+  // Format number with abbreviations
+  const formatNumber = (num: number, decimals: number = 2): string => {
+    if (num === 0) return '0';
+    if (num < 1000) return num.toFixed(decimals);
+    if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
+    if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
+    return (num / 1000000000).toFixed(1) + 'B';
+  };
+
+  // Format market cap
+  const formatMarketCap = (marketCap: number): string => {
+    if (marketCap === 0) return 'N/A';
+    return '$' + formatNumber(marketCap, 0);
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -117,33 +137,58 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
       onMouseLeave={handleMouseUp}
     >
       <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary}`}>
-        {/* Token Image */}
-        <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          {token.logo ? (
-            <img 
-              src={token.logo} 
-              alt={token.symbol}
-              className="w-20 h-20 rounded-full"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
-              {token.symbol?.charAt(0) || '?'}
+        {/* Token Header with Price Chart Background */}
+        <div className="relative h-48 overflow-hidden">
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600" />
+          
+          {/* Price chart overlay */}
+          {marketData && marketData.priceHistory.length > 0 && (
+            <div className="absolute inset-0 opacity-30">
+              <PriceChart 
+                data={marketData.priceHistory} 
+                height={192}
+                showGrid={false}
+              />
             </div>
           )}
+          
+          {/* Token icon and basic info */}
+          <div className="relative z-10 h-full flex flex-col items-center justify-center">
+            {token.logo ? (
+              <img 
+                src={token.logo} 
+                alt={token.symbol}
+                className="w-16 h-16 rounded-full mb-2 bg-white/10 backdrop-blur-sm"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold mb-2">
+                {token.symbol?.charAt(0) || '?'}
+              </div>
+            )}
+            <h2 className="text-xl font-bold text-white">{token.symbol}</h2>
+            <p className="text-sm text-white/80">{token.name}</p>
+          </div>
         </div>
 
-        {/* Token Info */}
-        <div className="p-6">
+        {/* Token Details */}
+        <div className="p-4 space-y-4">
+          {/* Price and Change */}
           <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold mb-2">{token.symbol}</h2>
-            <p className={`text-lg ${theme.text.secondary}`}>{token.name}</p>
+            <div className="text-2xl font-bold">${token.price?.toFixed(6) || 'N/A'}</div>
+            {marketData && (
+              <div className={`text-sm font-medium ${marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {marketData.priceChange24h >= 0 ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
+              </div>
+            )}
           </div>
 
-          <div className="space-y-3">
+          {/* Portfolio Info */}
+          <div className="space-y-2">
             <div className="flex justify-between">
               <span className={theme.text.secondary}>Balance:</span>
               <span className="font-semibold">
@@ -153,17 +198,39 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
             
             <div className="flex justify-between">
               <span className={theme.text.secondary}>Value:</span>
-              <span className="font-semibold">${token.value.toFixed(2)}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className={theme.text.secondary}>Price:</span>
-              <span className="font-semibold">${token.price?.toFixed(6) || 'N/A'}</span>
+              <span className="font-semibold text-lg">${token.value.toFixed(2)}</span>
             </div>
           </div>
 
+          {/* Market Data (if available) */}
+          {marketData && (
+            <div className="pt-2 border-t border-gray-700 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className={theme.text.secondary}>Market Cap:</span>
+                <span>{formatMarketCap(marketData.marketCap)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className={theme.text.secondary}>24h Volume:</span>
+                <span>${formatNumber(marketData.volume24h)}</span>
+              </div>
+              {marketData.holders > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className={theme.text.secondary}>Holders:</span>
+                  <span>{formatNumber(marketData.holders, 0)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Loading indicator for market data */}
+          {marketLoading && (
+            <div className="text-center text-sm text-gray-500">
+              Loading market data...
+            </div>
+          )}
+
           {/* Swipe Instructions */}
-          <div className="mt-6 text-center">
+          <div className="pt-4 mt-4 border-t border-gray-700">
             <div className="flex justify-center space-x-8 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">

@@ -8,6 +8,8 @@ A Farcaster mini app that allows users to easily batch sell multiple tokens from
 ## Features
 
 - 🧹 **Batch Token Selling**: Select multiple tokens and sell them all in one transaction
+- 🎯 **Swipe Mode**: Tinder-style interface for quick token management decisions
+- 📈 **Price Charts**: Visual price history and market data in swipe mode powered by Zapper XYZ
 - 🚀 **Farcaster Mini App**: Fully integrated as a Farcaster mini app with embeds and manifest
 - ⚡ **Optimized Performance**: Includes caching, pagination, and parallel quote fetching
 - 🎨 **Beautiful UI**: Clean interface with loading states, error handling, and toast notifications
@@ -82,6 +84,7 @@ Remember to:
 
 - [Farcaster Mini App Integration](docs/FARCASTER_MINIAPP_INTEGRATION.md)
 - [Zapper XYZ Integration](docs/ZAPPER_XYZ_INTEGRATION.md)
+- [Zapper Swipe Mode Integration](docs/ZAPPER_SWIPE_MODE_INTEGRATION.md)
 - [Caching System](docs/CACHING_SYSTEM.md)
 - [Token Image Cache](docs/TOKEN_IMAGE_CACHE.md)
 - [Pagination Implementation](docs/PAGINATION_IMPLEMENTATION.md)
