@@ -38,20 +38,22 @@ export async function POST(request: NextRequest) {
         });
 
       case 'invalidateWallet':
-        // Invalidate cache for a specific wallet address
+        // Invalidate cache for a specific wallet address (all pages)
         if (!walletAddress) {
           return NextResponse.json(
             { error: 'Wallet address is required for invalidateWallet action' },
             { status: 400 }
           );
         }
-        const walletKey = cacheKeys.tokens(walletAddress);
-        const walletSuccess = await invalidateCache(walletKey);
+        // Invalidate all cache entries for this wallet (all pages)
+        const walletPattern = `tokens:${walletAddress.toLowerCase()}:*`;
+        const walletDeletedCount = await invalidateByPattern(walletPattern);
         return NextResponse.json({
-          success: walletSuccess,
-          message: walletSuccess 
-            ? `Cache for wallet ${walletAddress} invalidated` 
-            : 'Failed to invalidate wallet cache',
+          success: walletDeletedCount > 0,
+          deletedCount: walletDeletedCount,
+          message: walletDeletedCount > 0
+            ? `Cache for wallet ${walletAddress} invalidated (${walletDeletedCount} entries)` 
+            : 'No cache entries found for wallet',
         });
 
       case 'clearNamespace':
@@ -98,7 +100,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const { cacheExists, getCacheTTL } = await import('@/app/lib/cache');
-    const key = cacheKeys.tokens(walletAddress);
+    
+    // Check for any cached entries for this wallet
+    const walletPattern = `tokens:${walletAddress.toLowerCase()}:*`;
+    const { invalidateByPattern } = await import('@/app/lib/cache');
+    
+    // For now, just check if any cache exists for this wallet
+    // In a real implementation, you might want to scan and show all cached pages
+    const key = cacheKeys.tokens(walletAddress, { page: 0, limit: 50, fetchAll: false });
     
     const exists = await cacheExists(key);
     const ttl = exists ? await getCacheTTL(key) : null;
@@ -109,6 +118,7 @@ export async function GET(request: NextRequest) {
       exists,
       ttl,
       ttlReadable: ttl && ttl > 0 ? `${Math.floor(ttl / 60)}m ${ttl % 60}s` : null,
+      note: 'Cache now includes page-specific keys. Multiple pages may be cached.',
     });
   } catch (error) {
     console.error('Cache status check error:', error);

@@ -18,6 +18,8 @@ export interface ApiResponse {
   tokens: ProcessedToken[];
   totalUsdValue: number;
   timestamp: string;
+  hasMore: boolean;
+  nextPage?: number;
   error?: string;
 }
 

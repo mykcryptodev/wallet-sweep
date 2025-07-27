@@ -8,7 +8,7 @@ import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { ErrorDisplay } from "./ui/ErrorDisplay";
 import { EmptyState } from "./ui/EmptyState";
 import TradeSummaryModal from "./TradeSummaryModal";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { NATIVE_TOKEN_ADDRESS } from "thirdweb";
 import { theme } from "../lib/theme";
 import { isAddressEqual } from "../lib/address";
@@ -20,9 +20,12 @@ export default function TokenList() {
   const { 
     tokens, 
     loading, 
+    loadingMore,
     error, 
     hasAttemptedFetch, 
     totalUsdValue, 
+    hasMore,
+    loadMore,
     retry,
     invalidateCacheAndRefetch 
   } = useTokenBalances(account?.address);
@@ -42,6 +45,7 @@ export default function TokenList() {
 
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const handleTransactionSuccess = () => {
     // Use cache invalidation and refetch for better data consistency
@@ -57,6 +61,14 @@ export default function TokenList() {
     setShowDropdown(false);
   };
 
+  // Intersection Observer for infinite scrolling
+  const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && hasMore && !loadingMore) {
+      loadMore();
+    }
+  }, [hasMore, loadingMore, loadMore]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -70,6 +82,25 @@ export default function TokenList() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '20px',
+      threshold: 0.1,
+    });
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [handleIntersection]);
 
   if (!account) {
     return (
@@ -145,16 +176,38 @@ export default function TokenList() {
         ) : tokens.length === 0 && hasAttemptedFetch ? (
           <EmptyState onRetry={retry} />
         ) : (
-          tokens
-            .filter(token => token.symbol !== "ETH" && token.address !== NATIVE_TOKEN_ADDRESS)
-            .map((token) => (
-              <TokenDisplay
-                key={token.address}
-                token={token}
-                isSelected={selectedTokens.has(token.address)}
-                onSelect={() => handleTokenSelect(token.address)}
-              />
-            ))
+          <>
+            {tokens
+              .filter(token => token.symbol !== "ETH" && token.address !== NATIVE_TOKEN_ADDRESS)
+              .map((token) => (
+                <TokenDisplay
+                  key={token.address}
+                  token={token}
+                  isSelected={selectedTokens.has(token.address)}
+                  onSelect={() => handleTokenSelect(token.address)}
+                />
+              ))}
+            
+            {/* Load More Trigger */}
+            {hasMore && (
+              <div ref={loadMoreRef} className="py-4">
+                {loadingMore ? (
+                  <div className="flex justify-center">
+                    <LoadingSpinner message="Loading more tokens..." />
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <button
+                      onClick={loadMore}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${theme.button.secondary}`}
+                    >
+                      Load More Tokens
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 

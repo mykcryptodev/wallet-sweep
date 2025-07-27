@@ -25,37 +25,15 @@ interface TokenApiResponse {
   tokens: ProcessedToken[];
   totalUsdValue: number;
   timestamp: string;
+  hasMore: boolean;
+  nextPage?: number;
 }
 
-// Helper function to check if an image URL is valid
-async function isImageUrlValid(url: string): Promise<boolean> {
-  try {
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
-    const response = await fetch(url, { 
-      method: 'HEAD',
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    const contentType = response.headers.get('content-type');
-    return response.ok && (contentType?.startsWith('image/') ?? false);
-  } catch (error) {
-    return false;
-  }
-}
-
-// Better token icon fallback logic with validation
-const getTokenIcon = async (token: any, tokenAddress: string, symbol: string): Promise<string> => {
+// Simplified token icon logic without excessive validation
+const getTokenIcon = (token: any, tokenAddress: string, symbol: string): string => {
   // First try the logo from the API response
-  if (token.logo) {
-    const isValid = await isImageUrlValid(token.logo);
-    if (isValid) {
-      return token.logo;
-    }
+  if (token.logo && token.logo.startsWith('http')) {
+    return token.logo;
   }
   
   // Try known token icons for popular tokens (these are reliable)
@@ -72,16 +50,10 @@ const getTokenIcon = async (token: any, tokenAddress: string, symbol: string): P
     return knownIcons[symbol];
   }
   
-  // Try trustwallet assets with proper checksummed address (with validation)
+  // Try trustwallet assets with proper checksummed address (without validation)
   try {
     const checksummedAddress = getAddress(tokenAddress);
-    const trustwalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/${checksummedAddress}/logo.png`;
-    
-    // Validate the TrustWallet URL before returning it
-    const isValid = await isImageUrlValid(trustwalletUrl);
-    if (isValid) {
-      return trustwalletUrl;
-    }
+    return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/${checksummedAddress}/logo.png`;
   } catch (error) {
     console.error('Error with TrustWallet URL for', tokenAddress, error);
   }
@@ -90,12 +62,98 @@ const getTokenIcon = async (token: any, tokenAddress: string, symbol: string): P
   return '';
 };
 
+// Function to fetch all tokens recursively with rate limiting
+async function fetchAllTokens(address: string, clientId: string): Promise<ProcessedToken[]> {
+  const allTokens: ProcessedToken[] = [];
+  let page = 0;
+  const limit = 50;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=${limit}&page=${page}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-client-id': clientId,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API call failed:', { errorText, status: response.status });
+      
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please check your client ID.');
+      }
+      
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      
+      throw new Error('Failed to fetch wallet data from Thirdweb API');
+    }
+
+    const data = await response.json();
+    
+    if (data.result?.tokens && data.result.tokens.length > 0) {
+      // Process tokens without image validation to reduce API calls
+      const processedTokens = data.result.tokens
+        .map((token: any) => {
+          const balanceFormatted = parseFloat(token.balance) / Math.pow(10, token.decimals || 18);
+          const priceUsd = token.price_data?.price_usd || 0;
+          
+          // Only include tokens with meaningful balance
+          if (balanceFormatted > 0.0001) {
+            const logo = getTokenIcon(token, token.token_address, token.symbol || 'UNKNOWN');
+            
+            return {
+              address: token.token_address,
+              symbol: token.symbol || 'UNKNOWN',
+              name: token.name || 'Unknown Token',
+              balance: token.balance,
+              decimals: token.decimals || 18,
+              logo,
+              value: balanceFormatted * priceUsd,
+              chainId: BASE_CHAIN_ID,
+              priceUsd: priceUsd,
+              balanceFormatted: balanceFormatted
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      
+      // Add processed tokens to allTokens
+      allTokens.push(...processedTokens);
+
+      // Check if we have more pages
+      hasMore = data.result.tokens.length === limit;
+      page++;
+      
+      // Add a small delay between API calls to avoid rate limiting
+      if (hasMore) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allTokens;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { address: string } }
 ) {
   try {
     const { address } = params;
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '0');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const fetchAll = searchParams.get('fetchAll') === 'true';
     
     // Validate wallet address format (basic check)
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
@@ -115,79 +173,89 @@ export async function GET(
     }
 
     // Use caching with 5 minute TTL for token balances
-    const cacheKey = cacheKeys.tokens(address);
+    const cacheKey = cacheKeys.tokens(address, { page, limit, fetchAll });
     const cachedData = await getOrSetCache<TokenApiResponse>(
       cacheKey,
       async () => {
         console.log(`Fetching fresh token data for ${address}`);
         
-        const processedTokens: ProcessedToken[] = [];
+        let processedTokens: ProcessedToken[] = [];
 
-        // Fetch only ERC20 tokens (exclude ETH)
-        const tokensResponse = await fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=50`, {
-          method: 'GET',
-          headers: {
-            'x-client-id': clientId,
-            'Content-Type': 'application/json',
-          },
-        });
+        let hasMore = false;
+        let nextPageValue = undefined;
+        
+        if (fetchAll) {
+          // Fetch all tokens recursively
+          processedTokens = await fetchAllTokens(address, clientId);
+        } else {
+          // Fetch only the requested page
+          const tokensResponse = await fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=${limit}&page=${page}`, {
+            method: 'GET',
+            headers: {
+              'x-client-id': clientId,
+              'Content-Type': 'application/json',
+            },
+          });
 
-        // Process ERC20 tokens
-        if (tokensResponse.ok) {
-          try {
-            const tokensData = await tokensResponse.json();
-            
-            if (tokensData.result?.tokens) {
-              // Process tokens in batches to avoid overwhelming the server with image validation requests
-              const tokenPromises = tokensData.result.tokens.map(async (token: any) => {
-                const balanceFormatted = parseFloat(token.balance) / Math.pow(10, token.decimals || 18);
-                const priceUsd = token.price_data?.price_usd || 0;
+          // Process ERC20 tokens
+          if (tokensResponse.ok) {
+            try {
+              const tokensData = await tokensResponse.json();
+              
+              // Get pagination info from the API response
+              hasMore = tokensData.result?.pagination?.hasMore || false;
+              nextPageValue = hasMore ? page + 1 : undefined;
+              
+              if (tokensData.result?.tokens) {
+                // Process tokens without image validation to reduce API calls
+                const processedTokensList = tokensData.result.tokens
+                  .map((token: any) => {
+                    const balanceFormatted = parseFloat(token.balance) / Math.pow(10, token.decimals || 18);
+                    const priceUsd = token.price_data?.price_usd || 0;
+                    
+                    // Only include tokens with meaningful balance
+                    if (balanceFormatted > 0.0001) {
+                      const logo = getTokenIcon(token, token.token_address, token.symbol || 'UNKNOWN');
+                      
+                      return {
+                        address: token.token_address,
+                        symbol: token.symbol || 'UNKNOWN',
+                        name: token.name || 'Unknown Token',
+                        balance: token.balance,
+                        decimals: token.decimals || 18,
+                        logo,
+                        value: balanceFormatted * priceUsd,
+                        chainId: BASE_CHAIN_ID,
+                        priceUsd: priceUsd,
+                        balanceFormatted: balanceFormatted
+                      };
+                    }
+                    return null;
+                  })
+                  .filter(Boolean);
                 
-                // Only include tokens with meaningful balance
-                if (balanceFormatted > 0.0001) {
-                  const logo = await getTokenIcon(token, token.token_address, token.symbol || 'UNKNOWN');
-                  
-                  return {
-                    address: token.token_address,
-                    symbol: token.symbol || 'UNKNOWN',
-                    name: token.name || 'Unknown Token',
-                    balance: token.balance,
-                    decimals: token.decimals || 18,
-                    logo,
-                    value: balanceFormatted * priceUsd,
-                    chainId: BASE_CHAIN_ID,
-                    priceUsd: priceUsd,
-                    balanceFormatted: balanceFormatted
-                  };
-                }
-                return null;
-              });
-              
-              // Wait for all token processing to complete
-              const results = await Promise.all(tokenPromises);
-              
-              // Filter out null results and add to processedTokens
-              results.forEach(result => {
-                if (result) {
-                  processedTokens.push(result);
-                }
-              });
+                processedTokens = processedTokensList;
+              }
+            } catch (tokensError) {
+              console.error('Error processing tokens:', tokensError);
             }
-          } catch (tokensError) {
-            console.error('Error processing tokens:', tokensError);
           }
-        }
 
-        // Handle API errors
-        if (!tokensResponse.ok) {
-          const tokensError = await tokensResponse.text();
-          console.error('API call failed:', { tokensError });
-          
-          if (tokensResponse.status === 401) {
-            throw new Error('Authentication failed. Please check your client ID.');
+          // Handle API errors
+          if (!tokensResponse.ok) {
+            const tokensError = await tokensResponse.text();
+            console.error('API call failed:', { tokensError });
+            
+            if (tokensResponse.status === 401) {
+              throw new Error('Authentication failed. Please check your client ID.');
+            }
+            
+            if (tokensResponse.status === 429) {
+              throw new Error('Rate limit exceeded. Please try again later.');
+            }
+            
+            throw new Error('Failed to fetch wallet data from Thirdweb API');
           }
-          
-          throw new Error('Failed to fetch wallet data from Thirdweb API');
         }
 
         // Sort tokens by USD value (highest first)
@@ -202,6 +270,8 @@ export async function GET(
           tokens: processedTokens,
           totalUsdValue: processedTokens.reduce((sum, token) => sum + token.value, 0),
           timestamp: new Date().toISOString(),
+          hasMore,
+          nextPage: nextPageValue,
         };
       },
       { ttl: 300 } // 5 minute cache TTL

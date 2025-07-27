@@ -233,7 +233,10 @@ export async function getCacheTTL(
 // Cache key helpers for common use cases
 export const cacheKeys = {
   // Token-related cache keys
-  tokens: (walletAddress: string) => `tokens:${walletAddress.toLowerCase()}`,
+  tokens: (walletAddress: string, params?: Record<string, any>) => {
+    const paramStr = params ? JSON.stringify(params, Object.keys(params).sort()) : '';
+    return `tokens:${walletAddress.toLowerCase()}:${paramStr}`;
+  },
   tokenPrice: (tokenAddress: string) => `price:${tokenAddress.toLowerCase()}`,
   
   // Generate cache key for API responses
