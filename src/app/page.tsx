@@ -421,7 +421,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
         )}
         
         {/* Token Header with Dynamic Background */}
-        <div className="relative min-h-56 overflow-hidden flex-shrink-0 flex items-center justify-center">
+        <div className="relative min-h-40 overflow-hidden flex-shrink-0 flex items-center justify-center">
           {/* Dynamic background based on token image */}
           <DynamicBackground token={token} />
           
@@ -431,7 +431,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <div className="w-full h-full flex items-center justify-center">
                 <PriceChart 
                   data={marketData.priceHistory} 
-                  height={200}
+                  height={150}
                   showGrid={false}
                 />
               </div>
@@ -444,44 +444,44 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <img 
                 src={token.logo} 
                 alt={token.symbol}
-                className="w-16 h-16 rounded-full mb-2 bg-white/10 backdrop-blur-sm"
+                className="w-12 h-12 rounded-full mb-2 bg-white/10 backdrop-blur-sm"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold mb-2">
+              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold mb-2">
                 {token.symbol?.charAt(0) || '?'}
               </div>
             )}
-            <h2 className="text-xl font-bold text-white">{token.symbol}</h2>
-            <p className="text-sm text-white/80">{token.name}</p>
+            <h2 className="text-lg font-bold text-white">{token.symbol}</h2>
+            <p className="text-xs text-white/80">{token.name}</p>
           </div>
         </div>
 
         {/* Token Details */}
-        <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+        <div className="p-3 flex-1 flex flex-col justify-between gap-3">
           {/* Value */}
-          <div className="text-center mb-4">
-            <div className="text-2xl font-bold">
+          <div className="text-center mb-3">
+            <div className="text-xl font-bold">
               ${token.value.toFixed(2)}
             </div>
           </div>
 
           {/* Portfolio Info */}
           <div className="flex-shrink-0">
-            <div className="flex justify-between">
+            <div className="flex justify-between text-xs">
               <span className={theme.text.secondary}>Balance:</span>
               <span className="font-semibold">
                 {formatTokenBalance(token.balance, token.decimals || 18)} {token.symbol}
               </span>
             </div>
             
-            <div className="flex justify-between">
+            <div className="flex justify-between text-xs">
               <span className={theme.text.secondary}>Price:</span>
               <div className="text-right">
-                <div className="font-semibold text-lg">${token.priceUsd?.toFixed(6) || 'N/A'}</div>
+                <div className="font-semibold text-base">${token.priceUsd?.toFixed(6) || 'N/A'}</div>
                 {marketData && marketData.priceChange24h !== 0 && (
                   <div className={`text-xs font-medium ${marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {marketData.priceChange24h >= 0 ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
@@ -494,16 +494,16 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
           {/* Market Data (if available) */}
           {marketData && (
             <div className="flex-shrink-0">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className={theme.text.secondary}>Market Cap:</span>
                 <span>{formatMarketCap(marketData.marketCap)}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className={theme.text.secondary}>24h Volume:</span>
                 <span>${formatNumber(marketData.volume24h)}</span>
               </div>
               {marketData.holders > 0 && (
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs">
                   <span className={theme.text.secondary}>Holders:</span>
                   <span>{formatNumber(marketData.holders, 0)}</span>
                 </div>
@@ -512,8 +512,8 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
           )}
 
           {/* Action Buttons */}
-          <div className="flex-shrink-0 mt-4">
-            <div className="flex space-x-4">
+          <div className="flex-shrink-0 mt-3">
+            <div className="flex space-x-3">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -531,7 +531,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                     }, 150);
                   }, 50);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white"
+                className="flex-1 py-2 px-3 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white text-sm"
               >
                 {isSelected ? 'Selected' : 'Sell'}
               </button>
@@ -552,14 +552,14 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                     }, 150);
                   }, 50);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 py-2 px-3 rounded-xl font-semibold transition-colors bg-green-500 hover:bg-green-600 text-white text-sm"
               >
                 Keep
               </button>
             </div>
             
             {/* Swipe Direction Hints */}
-            <div className="flex justify-between items-center mt-3 text-xs opacity-60">
+            <div className="flex justify-between items-center mt-2 text-xs opacity-60">
               <div className="flex items-center">
                 <span className="mr-1">👎</span>
                 <span>Swipe left to sell</span>
