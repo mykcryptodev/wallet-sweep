@@ -469,47 +469,66 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
             </div>
           </div>
 
-          {/* Portfolio Info */}
+          {/* Portfolio Info - Box Layout */}
           <div className="flex-shrink-0">
-            <div className="flex justify-between text-xs">
-              <span className={theme.text.secondary}>Balance:</span>
-              <span className="font-semibold">
-                {formatTokenBalance(token.balance, token.decimals || 18)} {token.symbol}
-              </span>
-            </div>
-            
-            <div className="flex justify-between text-xs">
-              <span className={theme.text.secondary}>Price:</span>
-              <div className="text-right">
-                <div className="font-semibold text-base">${token.priceUsd?.toFixed(6) || 'N/A'}</div>
-                <div className={`text-xs font-medium ${
-                  marketData
-                    ? marketData.priceChange24h >= 0
-                      ? 'text-green-500'
-                      : 'text-red-500'
-                    : 'text-white/60'
-                }`}>
-                  {marketData
-                    ? `${marketData.priceChange24h >= 0 ? '+' : ''}${marketData.priceChange24h.toFixed(2)}%`
-                    : '0.00%'}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {/* Balance Box */}
+              <div className={`p-3 rounded-xl ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Balance</div>
+                <div className="font-semibold text-sm">
+                  {formatTokenBalance(token.balance, token.decimals || 18)} {token.symbol}
+                </div>
+              </div>
+              
+              {/* Price Box */}
+              <div className={`p-3 rounded-xl ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Price</div>
+                <div className="flex items-center justify-center">
+                  <div className="font-semibold text-sm">
+                    ${Number(token.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 }) || 'N/A'}
+                  </div>
+                  <div className={`ml-2 text-xs font-medium ${
+                    marketData
+                      ? marketData.priceChange24h >= 0
+                        ? 'text-green-500'
+                        : 'text-red-500'
+                      : 'text-white/60'
+                  }`}>
+                    {marketData
+                      ? `${marketData.priceChange24h >= 0 ? '+' : ''}${marketData.priceChange24h.toFixed(2)}%`
+                      : '0.00%'}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Market Data (if available) */}
+          {/* Market Data - Box Layout */}
           <div className="flex-shrink-0">
-            <div className="flex justify-between text-xs">
-              <span className={theme.text.secondary}>Market Cap:</span>
-              <span>{marketData?.marketCap ? formatMarketCap(marketData.marketCap) : '--'}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className={theme.text.secondary}>24h Volume:</span>
-              <span>{marketData?.volume24h ? `$${formatNumber(marketData.volume24h)}` : '--'}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className={theme.text.secondary}>Holders:</span>
-              <span>{marketData?.holders ? formatNumber(marketData.holders, 0) : '--'}</span>
+            <div className="grid grid-cols-3 gap-2">
+              {/* Market Cap Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Market Cap</div>
+                <div className="font-semibold text-xs">
+                  {marketData?.marketCap ? formatMarketCap(marketData.marketCap) : '--'}
+                </div>
+              </div>
+              
+              {/* Volume Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">24h Volume</div>
+                <div className="font-semibold text-xs">
+                  {marketData?.volume24h ? `$${formatNumber(marketData.volume24h)}` : '--'}
+                </div>
+              </div>
+              
+              {/* Holders Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Holders</div>
+                <div className="font-semibold text-xs">
+                  {marketData?.holders ? formatNumber(marketData.holders, 0) : '--'}
+                </div>
+              </div>
             </div>
           </div>
 
