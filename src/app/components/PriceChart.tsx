@@ -27,8 +27,8 @@ export function PriceChart({ data, height = 120, showGrid = true }: PriceChartPr
   }
 
   // Calculate chart dimensions and data bounds
-  const width = 350; // Increased width for better visibility
-  const padding = { top: 15, right: 15, bottom: 25, left: 15 };
+  const width = 450; // Increased width for full container coverage
+  const padding = { top: 15, right: 5, bottom: 25, left: 5 }; // Minimal side padding
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -60,8 +60,8 @@ export function PriceChart({ data, height = 120, showGrid = true }: PriceChartPr
   const gradientColor = isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
 
   return (
-    <div className="relative">
-      <svg width={width} height={height} className="overflow-visible">
+    <div className="relative w-full h-full flex items-center justify-center">
+      <svg width={width} height={height} className="overflow-visible" style={{ maxWidth: '100%' }}>
         {/* Grid lines */}
         {showGrid && (
           <g>

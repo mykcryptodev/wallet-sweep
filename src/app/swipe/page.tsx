@@ -165,12 +165,14 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
           
           {/* Price chart overlay */}
           {marketData && marketData.priceHistory.length > 0 && (
-            <div className="absolute inset-0 opacity-30">
-              <PriceChart 
-                data={marketData.priceHistory} 
-                height={200}
-                showGrid={false}
-              />
+            <div className="absolute inset-0 opacity-30 flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
+                <PriceChart 
+                  data={marketData.priceHistory} 
+                  height={200}
+                  showGrid={false}
+                />
+              </div>
             </div>
           )}
           
