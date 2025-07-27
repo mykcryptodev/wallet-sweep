@@ -159,7 +159,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
     >
       <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary} flex flex-col`}>
         {/* Token Header with Price Chart Background */}
-        <div className="relative min-h-56 overflow-hidden flex-shrink-0">
+        <div className="relative min-h-56 overflow-hidden flex-shrink-0 flex items-center justify-center">
           {/* Background gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600" />
           
@@ -175,7 +175,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
           )}
           
           {/* Token icon and basic info */}
-          <div className="relative z-10 h-full flex flex-col items-center justify-center">
+          <div className="relative z-10 flex flex-col items-center justify-center text-center">
             {token.logo ? (
               <img 
                 src={token.logo} 
@@ -198,16 +198,11 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
 
         {/* Token Details */}
         <div className="p-4 flex-1 flex flex-col justify-between gap-4">
-          {/* Price and Change */}
+          {/* Value */}
           <div className="text-center mb-4">
             <div className="text-2xl font-bold">
-              ${token.priceUsd?.toFixed(6) || 'N/A'}
+              ${token.value.toFixed(2)}
             </div>
-            {marketData && marketData.priceChange24h !== 0 && (
-              <div className={`text-sm font-medium ${marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {marketData.priceChange24h >= 0 ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
-              </div>
-            )}
           </div>
 
           {/* Portfolio Info */}
@@ -220,8 +215,15 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
             </div>
             
             <div className="flex justify-between">
-              <span className={theme.text.secondary}>Value:</span>
-              <span className="font-semibold text-lg">${token.value.toFixed(2)}</span>
+              <span className={theme.text.secondary}>Price:</span>
+              <div className="text-right">
+                <div className="font-semibold text-lg">${token.priceUsd?.toFixed(6) || 'N/A'}</div>
+                {marketData && marketData.priceChange24h !== 0 && (
+                  <div className={`text-xs font-medium ${marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {marketData.priceChange24h >= 0 ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
