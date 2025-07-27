@@ -9,6 +9,7 @@ interface TokenMarketData {
   priceChange24h: number;
   marketCap: number;
   volume24h: number;
+  totalLiquidity: number;
   priceHistory: Array<{
     timestamp: number;
     price: number;
@@ -108,6 +109,7 @@ export async function GET(request: NextRequest) {
             priceChange24h: 0,
             marketCap: 0,
             volume24h: 0,
+            totalLiquidity: 0,
             priceHistory: generateMockPriceHistory(0),
             supply: {
               total: '0',
@@ -129,6 +131,7 @@ export async function GET(request: NextRequest) {
         let priceChange24h = 0;
         let marketCap = 0;
         let volume24h = 0;
+        let totalLiquidity = 0;
         let priceHistory: Array<{ timestamp: number; price: number }> = [];
         
         if (tokenData?.priceData) {
@@ -137,6 +140,7 @@ export async function GET(request: NextRequest) {
           priceChange24h = priceData.priceChange24h || 0;
           marketCap = priceData.marketCap || 0;
           volume24h = priceData.volume24h || 0;
+          totalLiquidity = priceData.totalLiquidity || 0;
           
           // Convert price ticks to our format
           if (priceData.priceTicks && priceData.priceTicks.length > 0) {
@@ -154,6 +158,7 @@ export async function GET(request: NextRequest) {
           priceChange24h: priceChange24h,
           marketCap: marketCap,
           volume24h: volume24h,
+          totalLiquidity: totalLiquidity,
           priceHistory: priceHistory.length > 0 ? priceHistory : generateMockPriceHistory(tokenPrice),
           supply: {
             total: '1000000000',

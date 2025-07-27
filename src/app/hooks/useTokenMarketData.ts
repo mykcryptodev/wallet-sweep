@@ -6,6 +6,7 @@ interface TokenMarketData {
   priceChange24h: number;
   marketCap: number;
   volume24h: number;
+  totalLiquidity: number;
   priceHistory: Array<{
     timestamp: number;
     price: number;

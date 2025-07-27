@@ -478,21 +478,8 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               {/* Price Box */}
               <div className={`p-3 rounded-xl ${theme.background.primary} border border-gray-700/30 text-center`}>
                 <div className="text-xs text-gray-400 mb-1">Price</div>
-                <div className="flex items-center justify-center">
-                  <div className="font-semibold text-sm">
-                    ${Number(token.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 }) || 'N/A'}
-                  </div>
-                  <div className={`ml-2 text-xs font-medium ${
-                    marketData
-                      ? marketData.priceChange24h >= 0
-                        ? 'text-green-500'
-                        : 'text-red-500'
-                      : 'text-white/60'
-                  }`}>
-                    {marketData
-                      ? `${marketData.priceChange24h >= 0 ? '+' : ''}${marketData.priceChange24h.toFixed(2)}%`
-                      : '0.00%'}
-                  </div>
+                <div className="font-semibold text-sm">
+                  ${Number(token.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 }) || 'N/A'}
                 </div>
               </div>
             </div>
@@ -500,7 +487,8 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
 
           {/* Market Data - Box Layout */}
           <div className="flex-shrink-0">
-            <div className="grid grid-cols-3 gap-2">
+            {/* First Row - Market Cap, Volume, Liquidity */}
+            <div className="grid grid-cols-3 gap-2 mb-2">
               {/* Market Cap Box */}
               <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
                 <div className="text-xs text-gray-400 mb-1">Market Cap</div>
@@ -517,11 +505,46 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                 </div>
               </div>
               
+              {/* Liquidity Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Liquidity</div>
+                <div className="font-semibold text-xs">
+                  {marketData?.totalLiquidity ? `$${formatNumber(marketData.totalLiquidity)}` : '--'}
+                </div>
+              </div>
+            </div>
+            
+            {/* Second Row - Holders and other stats */}
+            <div className="grid grid-cols-3 gap-2">
               {/* Holders Box */}
               <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
                 <div className="text-xs text-gray-400 mb-1">Holders</div>
                 <div className="font-semibold text-xs">
                   {marketData?.holders ? formatNumber(marketData.holders, 0) : '--'}
+                </div>
+              </div>
+              
+              {/* Price Change Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">24h Change</div>
+                <div className={`font-semibold text-xs ${
+                  marketData?.priceChange24h
+                    ? marketData.priceChange24h >= 0
+                      ? 'text-green-500'
+                      : 'text-red-500'
+                    : 'text-white/60'
+                }`}>
+                  {marketData?.priceChange24h
+                    ? `${marketData.priceChange24h >= 0 ? '+' : ''}${marketData.priceChange24h.toFixed(2)}%`
+                    : '0.00%'}
+                </div>
+              </div>
+              
+              {/* Supply Box */}
+              <div className={`p-2 rounded-lg ${theme.background.primary} border border-gray-700/30 text-center`}>
+                <div className="text-xs text-gray-400 mb-1">Supply</div>
+                <div className="font-semibold text-xs">
+                  {marketData?.supply?.circulating ? formatNumber(parseFloat(marketData.supply.circulating), 0) : '--'}
                 </div>
               </div>
             </div>
