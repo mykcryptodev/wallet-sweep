@@ -7,10 +7,41 @@ import "react-toastify/dist/ReactToastify.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Farcaster Mini App Embed configuration
+const miniAppEmbed = {
+  version: "1",
+  imageUrl: "https://wallet-sweep.vercel.app/api/og",
+  button: {
+    title: "🧹 Sweep Wallet",
+    action: {
+      type: "launch_frame",
+      name: "Wallet Sweep",
+      url: "https://wallet-sweep.vercel.app",
+      splashImageUrl: "https://wallet-sweep.vercel.app/api/splash-icon",
+      splashBackgroundColor: "#1a1a1a"
+    }
+  }
+};
+
 export const metadata: Metadata = {
-  title: "thirdweb SDK + Next starter",
-  description:
-    "Starter template for using thirdweb SDK with Next.js App router",
+  title: "Wallet Sweep - Batch Sell Tokens",
+  description: "Easily batch sell multiple tokens from your wallet in one transaction. Connect your wallet and sweep unwanted tokens.",
+  openGraph: {
+    title: "Wallet Sweep - Batch Sell Tokens",
+    description: "Easily batch sell multiple tokens from your wallet in one transaction",
+    images: [
+      {
+        url: "https://wallet-sweep.vercel.app/api/og",
+        width: 1200,
+        height: 800,
+        alt: "Wallet Sweep - Batch Sell Tokens",
+      },
+    ],
+  },
+  other: {
+    "fc:miniapp": JSON.stringify(miniAppEmbed),
+    "fc:frame": JSON.stringify(miniAppEmbed), // For backward compatibility
+  },
 };
 
 export default function RootLayout({

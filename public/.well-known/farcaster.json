@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "PLACEHOLDER_HEADER",
+    "payload": "PLACEHOLDER_PAYLOAD",
+    "signature": "PLACEHOLDER_SIGNATURE"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Wallet Sweep",
+    "iconUrl": "https://wallet-sweep.vercel.app/api/splash-icon",
+    "homeUrl": "https://wallet-sweep.vercel.app/",
+    "imageUrl": "https://wallet-sweep.vercel.app/api/og",
+    "buttonTitle": "🧹 Sweep Wallet",
+    "splashImageUrl": "https://wallet-sweep.vercel.app/api/splash-icon",
+    "splashBackgroundColor": "#1a1a1a",
+    "webhookUrl": "https://wallet-sweep.vercel.app/api/webhook"
+  }
+}
