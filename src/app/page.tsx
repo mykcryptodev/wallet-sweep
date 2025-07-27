@@ -76,71 +76,207 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [startTime, setStartTime] = useState(0);
+  const [velocity, setVelocity] = useState({ x: 0, y: 0 });
+  const [isAnimating, setIsAnimating] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number>();
+  const lastTouchTimeRef = useRef(0);
   
   // Fetch market data from Zapper
   const { data: marketData, loading: marketLoading } = useTokenMarketData(token.address);
 
+  // Haptic feedback function
+  const triggerHaptic = () => {
+    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+  };
+
+  // Calculate velocity
+  const calculateVelocity = (currentPos: { x: number, y: number }, currentTime: number) => {
+    const timeDiff = currentTime - startTime;
+    if (timeDiff > 0) {
+      return {
+        x: (currentPos.x - startPos.x) / timeDiff,
+        y: (currentPos.y - startPos.y) / timeDiff
+      };
+    }
+    return { x: 0, y: 0 };
+  };
+
+  // Animate card back to center or off screen
+  const animateCard = (targetX: number, targetY: number, duration: number = 300) => {
+    setIsAnimating(true);
+    const startX = dragOffset.x;
+    const startY = dragOffset.y;
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      const newX = startX + (targetX - startX) * easeOut;
+      const newY = startY + (targetY - startY) * easeOut;
+      
+      setDragOffset({ x: newX, y: newY });
+      
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        setIsAnimating(false);
+        setDragOffset({ x: 0, y: 0 });
+        setIsDragging(false);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling
     const touch = e.touches[0];
+    const currentTime = performance.now();
+    
     setStartPos({ x: touch.clientX, y: touch.clientY });
+    setStartTime(currentTime);
+    lastTouchTimeRef.current = currentTime;
     setIsDragging(true);
+    setVelocity({ x: 0, y: 0 });
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || isAnimating) return;
+    e.preventDefault(); // Prevent scrolling
+    
     const touch = e.touches[0];
+    const currentTime = performance.now();
     const offsetX = touch.clientX - startPos.x;
     const offsetY = touch.clientY - startPos.y;
+    
     setDragOffset({ x: offsetX, y: offsetY });
+    
+    // Calculate velocity
+    const newVelocity = calculateVelocity({ x: touch.clientX, y: touch.clientY }, currentTime);
+    setVelocity(newVelocity);
   };
 
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isDragging || isAnimating) return;
+    e.preventDefault();
     
-    const threshold = 100;
-    if (dragOffset.x > threshold) {
+    const currentTime = performance.now();
+    const finalVelocity = calculateVelocity(dragOffset, currentTime);
+    
+    // Dynamic threshold based on screen width and velocity
+    const screenWidth = window.innerWidth;
+    const baseThreshold = screenWidth * 0.25; // 25% of screen width
+    const velocityThreshold = Math.abs(finalVelocity.x) * 0.5; // Velocity bonus
+    const threshold = Math.max(baseThreshold - velocityThreshold, screenWidth * 0.15); // Min 15%
+    
+    // Determine swipe direction and trigger action
+    if (dragOffset.x > threshold || finalVelocity.x > 0.8) {
+      triggerHaptic();
       onSwipeRight();
-    } else if (dragOffset.x < -threshold) {
+      animateCard(screenWidth * 1.5, dragOffset.y, 200);
+    } else if (dragOffset.x < -threshold || finalVelocity.x < -0.8) {
+      triggerHaptic();
       onSwipeLeft();
+      animateCard(-screenWidth * 1.5, dragOffset.y, 200);
+    } else {
+      // Snap back to center
+      animateCard(0, 0, 300);
     }
-    
-    setDragOffset({ x: 0, y: 0 });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    const currentTime = performance.now();
     setStartPos({ x: e.clientX, y: e.clientY });
+    setStartTime(currentTime);
     setIsDragging(true);
+    setVelocity({ x: 0, y: 0 });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || isAnimating) return;
+    
+    const currentTime = performance.now();
     const offsetX = e.clientX - startPos.x;
     const offsetY = e.clientY - startPos.y;
+    
     setDragOffset({ x: offsetX, y: offsetY });
+    
+    // Calculate velocity
+    const newVelocity = calculateVelocity({ x: e.clientX, y: e.clientY }, currentTime);
+    setVelocity(newVelocity);
   };
 
-  const handleMouseUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isDragging || isAnimating) return;
     
-    const threshold = 100;
-    if (dragOffset.x > threshold) {
+    const currentTime = performance.now();
+    const finalVelocity = calculateVelocity(dragOffset, currentTime);
+    
+    // Dynamic threshold for mouse
+    const screenWidth = window.innerWidth;
+    const baseThreshold = screenWidth * 0.2; // 20% of screen width for mouse
+    const velocityThreshold = Math.abs(finalVelocity.x) * 0.3;
+    const threshold = Math.max(baseThreshold - velocityThreshold, screenWidth * 0.1);
+    
+    if (dragOffset.x > threshold || finalVelocity.x > 0.5) {
       onSwipeRight();
-    } else if (dragOffset.x < -threshold) {
+      animateCard(screenWidth * 1.5, dragOffset.y, 200);
+    } else if (dragOffset.x < -threshold || finalVelocity.x < -0.5) {
       onSwipeLeft();
+      animateCard(-screenWidth * 1.5, dragOffset.y, 200);
+    } else {
+      animateCard(0, 0, 300);
     }
-    
-    setDragOffset({ x: 0, y: 0 });
   };
+
+  const handleMouseLeave = () => {
+    if (isDragging && !isAnimating) {
+      animateCard(0, 0, 300);
+    }
+  };
+
+  // Cleanup animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   const getRotation = () => {
-    return (dragOffset.x / 10) * (dragOffset.x > 0 ? 1 : -1);
+    const rotation = (dragOffset.x / 20) * (dragOffset.x > 0 ? 1 : -1);
+    return Math.max(-15, Math.min(15, rotation)); // Clamp rotation
   };
 
   const getOpacity = () => {
-    return 1 - Math.abs(dragOffset.x) / 300;
+    const opacity = 1 - Math.abs(dragOffset.x) / (window.innerWidth * 0.8);
+    return Math.max(0.3, Math.min(1, opacity)); // Clamp opacity
+  };
+
+  const getScale = () => {
+    const scale = 1 - Math.abs(dragOffset.x) / (window.innerWidth * 2);
+    return Math.max(0.8, Math.min(1, scale)); // Clamp scale
+  };
+
+  // Get swipe direction for visual feedback
+  const getSwipeDirection = () => {
+    if (Math.abs(dragOffset.x) < 50) return null;
+    return dragOffset.x > 0 ? 'right' : 'left';
+  };
+
+  // Get visual feedback opacity
+  const getFeedbackOpacity = () => {
+    const opacity = Math.abs(dragOffset.x) / (window.innerWidth * 0.4);
+    return Math.min(0.8, opacity);
   };
 
   // Format number with abbreviations
@@ -167,14 +303,14 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
       // Format the number with abbreviations
       const num = parseFloat(balanceInTokens);
       if (num === 0) return '0';
-      if (num < 1) return num.toFixed(6); // Show more decimals for small amounts
+      if (num < 0.0001) return '< 0.0001';
+      if (num < 1) return num.toFixed(4);
       if (num < 1000) return num.toFixed(2);
       if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
       if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
       return (num / 1000000000).toFixed(1) + 'B';
     } catch (error) {
-      // Fallback to original display if conversion fails
-      return parseFloat(balanceWei).toLocaleString();
+      return '0';
     }
   };
 
@@ -183,12 +319,13 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
   return (
     <div
       ref={cardRef}
-      className={`w-full h-full cursor-grab active:cursor-grabbing transition-all duration-200 ${
+      className={`w-full h-full cursor-grab active:cursor-grabbing select-none touch-none ${
         isDragging ? 'z-50' : 'z-10'
       }`}
       style={{
-        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${getRotation()}deg)`,
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${getRotation()}deg) scale(${getScale()})`,
         opacity: getOpacity(),
+        transition: isAnimating ? 'none' : 'transform 0.1s ease-out',
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -196,7 +333,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
       <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary} flex flex-col relative`}>
         {/* Selection indicator */}
@@ -206,6 +343,41 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <span className="text-sm font-bold">×</span>
             </div>
           </div>
+        )}
+
+        {/* Swipe Feedback Overlays */}
+        {getSwipeDirection() && (
+          <>
+            {/* Keep overlay (right swipe) */}
+            {getSwipeDirection() === 'right' && (
+              <div 
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                style={{ opacity: getFeedbackOpacity() }}
+              >
+                <div className="bg-green-500/20 backdrop-blur-sm rounded-3xl border-4 border-green-500/50 w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">👍</div>
+                    <div className="text-2xl font-bold text-green-500">KEEP</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Sell overlay (left swipe) */}
+            {getSwipeDirection() === 'left' && (
+              <div 
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                style={{ opacity: getFeedbackOpacity() }}
+              >
+                <div className="bg-red-500/20 backdrop-blur-sm rounded-3xl border-4 border-red-500/50 w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">👎</div>
+                    <div className="text-2xl font-bold text-red-500">SELL</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
         
         {/* Token Header with Dynamic Background */}
@@ -305,6 +477,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  triggerHaptic();
                   onSwipeLeft();
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white"
@@ -314,12 +487,25 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  triggerHaptic();
                   onSwipeRight();
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-green-500 hover:bg-green-600 text-white"
               >
                 Keep
               </button>
+            </div>
+            
+            {/* Swipe Direction Hints */}
+            <div className="flex justify-between items-center mt-3 text-xs opacity-60">
+              <div className="flex items-center">
+                <span className="mr-1">👎</span>
+                <span>Swipe left to sell</span>
+              </div>
+              <div className="flex items-center">
+                <span>Swipe right to keep</span>
+                <span className="ml-1">👍</span>
+              </div>
             </div>
           </div>
         </div>
