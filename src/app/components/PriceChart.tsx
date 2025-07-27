@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { theme } from '../lib/theme';
+import { useSystemTheme } from '../hooks/useSystemTheme';
 
 interface PriceData {
   timestamp: number;
@@ -15,6 +16,9 @@ interface PriceChartProps {
 }
 
 export function PriceChart({ data, height = 120, showGrid = true }: PriceChartProps) {
+  const { theme: systemTheme } = useSystemTheme();
+  const isDarkMode = systemTheme === 'dark';
+
   if (!data || data.length === 0) {
     return (
       <div 
@@ -56,8 +60,14 @@ export function PriceChart({ data, height = 120, showGrid = true }: PriceChartPr
 
   // Determine if price is up or down
   const isPositive = data.length > 1 && data[data.length - 1].price >= data[0].price;
-  const strokeColor = isPositive ? '#10b981' : '#ef4444'; // green or red
-  const gradientColor = isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+  
+  // Theme-aware colors
+  const strokeColor = isPositive 
+    ? (isDarkMode ? '#10b981' : '#00ff88') // Neon green for light mode
+    : (isDarkMode ? '#ef4444' : '#ff0066'); // Neon red for light mode
+  const gradientColor = isPositive 
+    ? (isDarkMode ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 255, 136, 0.2)')
+    : (isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 0, 102, 0.2)');
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
@@ -102,9 +112,10 @@ export function PriceChart({ data, height = 120, showGrid = true }: PriceChartPr
           d={pathData}
           fill="none"
           stroke={strokeColor}
-          strokeWidth={2}
+          strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
+          filter="drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))"
         />
 
         {/* Data points */}

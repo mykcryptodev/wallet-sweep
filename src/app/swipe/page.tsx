@@ -24,6 +24,48 @@ import { useTokenMarketData } from "../hooks/useTokenMarketData";
 import { PriceChart } from "../components/PriceChart";
 import { toTokens } from "thirdweb";
 
+// Dynamic Background Component
+function DynamicBackground({ token }: { token: any }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const { theme: systemTheme } = useSystemTheme();
+  const isDarkMode = systemTheme === 'dark';
+
+  if (!token.logo || imageError) {
+    return (
+      <div className={`absolute inset-0 ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-blue-900 to-purple-900' 
+          : 'bg-gradient-to-br from-blue-500 to-purple-600'
+      }`} />
+    );
+  }
+
+  return (
+    <>
+      {/* Blurred background image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${token.logo})`,
+          filter: isDarkMode ? 'blur(20px) brightness(0.3)' : 'blur(20px) brightness(0.7)',
+          transform: 'scale(1.2)',
+        }}
+      />
+      
+      {/* Overlay for better contrast */}
+      <div className={`absolute inset-0 ${isDarkMode ? 'bg-black/40' : 'bg-white/30'}`} />
+      
+      {/* Subtle gradient overlay */}
+      <div className={`absolute inset-0 ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-black/20 via-transparent to-black/30' 
+          : 'bg-gradient-to-br from-white/20 via-transparent to-white/30'
+      }`} />
+    </>
+  );
+}
+
 interface TokenCardProps {
   token: any;
   onSwipeLeft: () => void;
@@ -158,14 +200,14 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
       onMouseLeave={handleMouseUp}
     >
       <div className={`h-full rounded-3xl shadow-2xl overflow-hidden ${theme.background.secondary} ${theme.text.primary} flex flex-col`}>
-        {/* Token Header with Price Chart Background */}
+        {/* Token Header with Dynamic Background */}
         <div className="relative min-h-56 overflow-hidden flex-shrink-0 flex items-center justify-center">
-          {/* Background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600" />
+          {/* Dynamic background based on token image */}
+          <DynamicBackground token={token} />
           
           {/* Price chart overlay */}
           {marketData && marketData.priceHistory.length > 0 && (
-            <div className="absolute inset-0 opacity-30 flex items-center justify-center">
+            <div className="absolute inset-0 opacity-20 flex items-center justify-center">
               <div className="w-full h-full flex items-center justify-center">
                 <PriceChart 
                   data={marketData.priceHistory} 
@@ -249,28 +291,27 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible }: TokenCardPro
             </div>
           )}
 
-          {/* Loading indicator for market data */}
-          {marketLoading && (
-            <div className="text-center text-sm text-gray-500 flex-shrink-0">
-              Loading market data...
-            </div>
-          )}
-
-          {/* Swipe Instructions */}
+          {/* Action Buttons */}
           <div className="flex-shrink-0 mt-4">
-            <div className="flex justify-center space-x-8 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
-                  <span className="text-white text-xs">✕</span>
-                </div>
-                <span className={theme.text.secondary}>Sell All</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className={theme.text.secondary}>Keep</span>
-              </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSwipeLeft();
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white"
+              >
+                Sell
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSwipeRight();
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-green-500 hover:bg-green-600 text-white"
+              >
+                Keep
+              </button>
             </div>
           </div>
         </div>
@@ -553,7 +594,7 @@ export default function SwipePage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/10 to-transparent">
         <div className="max-w-md mx-auto">
           {/* Progress */}
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-sm mb-4">
             <span className={theme.text.secondary}>
               {currentTokenIndex + 1} of {swipeableTokens.length}
               {hasMore && (
@@ -564,6 +605,24 @@ export default function SwipePage() {
               Swipe left to sell, right to keep
             </span>
           </div>
+
+          {/* Go Back Button */}
+          {currentTokenIndex > 0 && (
+            <div className="mb-4">
+              <button
+                onClick={() => setCurrentTokenIndex(prev => prev - 1)}
+                disabled={sellingToken !== null}
+                className={`w-full py-3 px-4 rounded-xl font-semibold transition-colors ${
+                  sellingToken !== null 
+                    ? theme.button.disabled 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                }`}
+              >
+                ← Go Back
+              </button>
+            </div>
+          )}
+
 
           {/* Loading more indicator */}
           {loadingMore && (
