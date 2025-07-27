@@ -79,6 +79,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
   const [startTime, setStartTime] = useState(0);
   const [velocity, setVelocity] = useState({ x: 0, y: 0 });
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isFadingIn, setIsFadingIn] = useState(true); // New state for fade-in animation
   const cardRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
   const lastTouchTimeRef = useRef(0);
@@ -254,6 +255,15 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     };
   }, []);
 
+  // Reset state when component mounts (for new cards)
+  useEffect(() => {
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+    setIsAnimating(false);
+    setVelocity({ x: 0, y: 0 });
+    setIsFadingIn(true); // Start fade-in animation
+  }, [token.address]); // Reset when token changes
+
   const getRotation = () => {
     const rotation = (dragOffset.x / 20) * (dragOffset.x > 0 ? 1 : -1);
     return Math.max(-15, Math.min(15, rotation)); // Clamp rotation
@@ -280,6 +290,34 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     const opacity = Math.abs(dragOffset.x) / (window.innerWidth * 0.4);
     return Math.min(0.8, opacity);
   };
+
+  // Get fade-in opacity for smooth card appearance
+  const getFadeInOpacity = () => {
+    if (!isFadingIn) return 1;
+    // Start with higher opacity for more visible animation
+    return 0.4; // Start at 40% opacity for smoother fade-in
+  };
+
+  // Get scale for fade-in animation
+  const getFadeInScale = () => {
+    if (!isFadingIn) return 1;
+    // Start small and scale up to full size
+    return 0.75; // Start at 75% scale for smoother scale-up
+  };
+
+  // Animate fade-in with easing
+  useEffect(() => {
+    if (isFadingIn) {
+      const fadeInAnimation = () => {
+        setIsFadingIn(false);
+      };
+      
+      // Start the fade-in animation immediately for seamless transition
+      const timer = setTimeout(fadeInAnimation, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isFadingIn]);
 
   // Format number with abbreviations
   const formatNumber = (num: number, decimals: number = 2): string => {
@@ -325,9 +363,9 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
         isDragging ? 'z-50' : 'z-10'
       }`}
       style={{
-        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${getRotation()}deg) scale(${getScale()})`,
-        opacity: getOpacity(),
-        transition: isAnimating ? 'none' : 'transform 0.1s ease-out',
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${getRotation()}deg) scale(${getScale() * getFadeInScale()})`,
+        opacity: getOpacity() * getFadeInOpacity(),
+        transition: isAnimating ? 'none' : 'transform 0.1s ease-out, opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), scale 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -699,7 +737,7 @@ export default function Home() {
 
       {/* Card Container */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-md h-auto">
+        <div className="relative w-full max-w-md h-auto flex items-center justify-center">
           {isFinished ? (
             <div className={`min-h-[500px] rounded-3xl shadow-2xl ${theme.background.secondary} ${theme.text.primary} flex items-center justify-center p-6`}>
               <div className="text-center">
@@ -717,6 +755,7 @@ export default function Home() {
             </div>
           ) : currentToken ? (
             <TokenCard
+              key={currentToken.address + currentTokenIndex} // Force fresh state for each card
               token={currentToken}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
