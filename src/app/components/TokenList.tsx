@@ -9,6 +9,7 @@ import { ErrorDisplay } from "./ui/ErrorDisplay";
 import { EmptyState } from "./ui/EmptyState";
 import { useState, useEffect, useRef } from "react";
 import { NATIVE_TOKEN_ADDRESS } from "thirdweb";
+import { theme } from "../lib/theme";
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -69,7 +70,9 @@ export default function TokenList() {
   if (!account) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600">Connect your wallet to see your tokens</p>
+        <p className={theme.text.secondary}>
+          Connect your wallet to see your tokens
+        </p>
       </div>
     );
   }
@@ -82,17 +85,19 @@ export default function TokenList() {
     <div>
       {/* Header with Destination Token Dropdown */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-black">Tokens</h2>
+        <h2 className={`text-lg font-semibold ${theme.text.primary}`}>
+          Tokens
+        </h2>
         <div className="flex items-center space-x-2">
           {totalUsdValue > 0 && (
-            <p className="text-sm text-gray-600">
+            <p className={`text-sm ${theme.text.secondary}`}>
               Total: <span className="font-medium">${totalUsdValue.toFixed(2)}</span>
             </p>
           )}
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className={`flex items-center space-x-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${theme.button.secondary}`}
             >
               <span>Sell to {getDestinationTokenSymbol()}</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,19 +107,23 @@ export default function TokenList() {
             
             {/* Dropdown */}
             {showDropdown && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32" ref={dropdownRef}>
+              <div className={`absolute top-full right-0 mt-1 rounded-lg shadow-lg z-10 min-w-32 ${theme.dropdown.background} ${theme.dropdown.border}`} ref={dropdownRef}>
                 <button
                   onClick={() => handleDestinationChange(USDC_ADDRESS)}
-                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
-                    destinationToken === USDC_ADDRESS ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                  className={`w-full px-4 py-2 text-left transition-colors ${
+                    destinationToken === USDC_ADDRESS 
+                      ? theme.dropdown.item.selected
+                      : theme.dropdown.item.unselected
                   }`}
                 >
                   USDC
                 </button>
                 <button
                   onClick={() => handleDestinationChange("ETH")}
-                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
-                    destinationToken === "ETH" ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                  className={`w-full px-4 py-2 text-left transition-colors ${
+                    destinationToken === "ETH" 
+                      ? theme.dropdown.item.selected
+                      : theme.dropdown.item.unselected
                   }`}
                 >
                   ETH
@@ -147,7 +156,7 @@ export default function TokenList() {
 
       {/* Success Message */}
       {receipt && (
-        <div className="text-sm text-green-600 text-center bg-green-50 p-2 rounded-lg mb-3">
+        <div className={`text-sm text-center p-2 rounded-lg mb-3 ${theme.status.success}`}>
           Transaction confirmed! Hash: {receipt.receipts?.[0]?.transactionHash?.slice(0, 10)}...
         </div>
       )}
@@ -156,10 +165,10 @@ export default function TokenList() {
       <button
         onClick={() => executeBatchSell(handleTransactionSuccess)}
         disabled={selectedTokens.size === 0 || processing}
-        className={`w-full py-4 rounded-2xl font-semibold text-white transition-colors relative ${
+        className={`w-full py-4 rounded-2xl font-semibold transition-colors relative ${
           selectedTokens.size === 0 || processing
-            ? "bg-gray-300 cursor-not-allowed"
-            : "bg-blue-500 hover:bg-blue-600"
+            ? theme.button.disabled
+            : theme.button.primary
         }`}
       >
         {processing ? (

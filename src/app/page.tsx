@@ -2,21 +2,23 @@
 
 import { ConnectButton } from "thirdweb/react";
 import { client } from "./client";
-import { defineChain } from "thirdweb/chains";
+import { base } from "thirdweb/chains";
 import TokenList from "./components/TokenList";
-
-// Define Base mainnet chain
-const baseMainnet = defineChain(8453);
+import { theme } from "./lib/theme";
+import { useSystemTheme } from "./hooks/useSystemTheme";
 
 export default function Home() {
+  const { theme: systemTheme } = useSystemTheme();
+
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6">
+    <main className={`min-h-screen flex items-center justify-center p-4 ${theme.background.primary}`}>
+      <div className={`w-full max-w-md rounded-3xl shadow-lg p-6 ${theme.background.secondary} ${theme.text.primary}`}>
         {/* Connect Button */}
         <div className="mb-6">
           <ConnectButton
             client={client}
-            chain={baseMainnet}
+            chain={base}
+            theme={systemTheme}
             appMetadata={{
               name: "Wallet Sweep",
               url: "https://wallet-sweep.vercel.app",
@@ -25,13 +27,7 @@ export default function Home() {
               label: "Connect Wallet",
               style: {
                 width: "100%",
-                borderRadius: "12px",
-                padding: "12px 16px",
-                border: "2px solid #000",
-                backgroundColor: "white",
-                color: "black",
-                fontWeight: "500",
-              }
+              },
             }}
             connectModal={{
               size: "compact",

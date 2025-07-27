@@ -6,6 +6,7 @@ import { base } from "thirdweb/chains";
 import { client } from "../client";
 import { TokenProvider, TokenIcon, TokenSymbol } from "thirdweb/react";
 import { ProcessedToken } from "../types/token";
+import { theme } from "../lib/theme";
 
 interface TokenDisplayProps {
   token: ProcessedToken;
@@ -60,8 +61,8 @@ export const TokenDisplay = ({ token, isSelected, onSelect }: TokenDisplayProps)
         <div
           className={`flex items-center p-3 rounded-xl border-2 transition-colors cursor-pointer ${
             isSelected
-              ? "bg-blue-50 border-blue-300"
-              : "bg-gray-50 border-gray-200 hover:border-gray-300"
+              ? theme.tokenCard.selected
+              : theme.tokenCard.unselected
           }`}
           onClick={onSelect}
         >
@@ -88,14 +89,14 @@ export const TokenDisplay = ({ token, isSelected, onSelect }: TokenDisplayProps)
             </div>
             <div className="flex-grow">
               <div className="flex justify-between items-center">
-                <span className="font-medium text-black">
+                <span className={`font-medium ${theme.text.primary}`}>
                   <TokenSymbol />
                 </span>
-                <span className="font-medium text-black">
+                <span className={`font-medium ${theme.text.primary}`}>
                   ${token.value > 0 ? token.value.toFixed(2) : '0.00'}
                 </span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className={`text-sm ${theme.text.secondary}`}>
                 {token.balanceFormatted.toFixed(6)} <TokenSymbol />
               </div>
             </div>
@@ -109,8 +110,8 @@ export const TokenDisplay = ({ token, isSelected, onSelect }: TokenDisplayProps)
     <div
       className={`flex items-center p-3 rounded-xl border-2 transition-colors cursor-pointer ${
         isSelected
-          ? "bg-blue-50 border-blue-300"
-          : "bg-gray-50 border-gray-200 hover:border-gray-300"
+          ? theme.tokenCard.selected
+          : theme.tokenCard.unselected
       }`}
       onClick={onSelect}
     >
@@ -137,12 +138,12 @@ export const TokenDisplay = ({ token, isSelected, onSelect }: TokenDisplayProps)
         />
         <div className="flex-grow">
           <div className="flex justify-between items-center">
-            <span className="font-medium text-black">{token.symbol}</span>
-            <span className="font-medium text-black">
+            <span className={`font-medium ${theme.text.primary}`}>{token.symbol}</span>
+            <span className={`font-medium ${theme.text.primary}`}>
               ${token.value > 0 ? token.value.toFixed(2) : '0.00'}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className={`text-sm ${theme.text.secondary}`}>
             {token.balanceFormatted.toFixed(6)} {token.symbol}
           </div>
         </div>
