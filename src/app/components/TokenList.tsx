@@ -10,6 +10,7 @@ import { EmptyState } from "./ui/EmptyState";
 import { useState, useEffect, useRef } from "react";
 import { NATIVE_TOKEN_ADDRESS } from "thirdweb";
 import { theme } from "../lib/theme";
+import Link from "next/link";
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -157,7 +158,14 @@ export default function TokenList() {
       {/* Success Message */}
       {receipt && (
         <div className={`text-sm text-center p-2 rounded-lg mb-3 ${theme.status.success}`}>
-          Transaction confirmed! Hash: {receipt.receipts?.[0]?.transactionHash?.slice(0, 10)}...
+          <Link
+            href={`https://basescan.org/tx/${receipt.receipts?.[0]?.transactionHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:no-underline font-medium"
+          >
+            View transaction
+          </Link>
         </div>
       )}
 
