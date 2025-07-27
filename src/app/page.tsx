@@ -482,34 +482,36 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <span className={theme.text.secondary}>Price:</span>
               <div className="text-right">
                 <div className="font-semibold text-base">${token.priceUsd?.toFixed(6) || 'N/A'}</div>
-                {marketData && marketData.priceChange24h !== 0 && (
-                  <div className={`text-xs font-medium ${marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {marketData.priceChange24h >= 0 ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
-                  </div>
-                )}
+                <div className={`text-xs font-medium ${
+                  marketData
+                    ? marketData.priceChange24h >= 0
+                      ? 'text-green-500'
+                      : 'text-red-500'
+                    : 'text-white/60'
+                }`}>
+                  {marketData
+                    ? `${marketData.priceChange24h >= 0 ? '+' : ''}${marketData.priceChange24h.toFixed(2)}%`
+                    : '0.00%'}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Market Data (if available) */}
-          {marketData && (
-            <div className="flex-shrink-0">
-              <div className="flex justify-between text-xs">
-                <span className={theme.text.secondary}>Market Cap:</span>
-                <span>{formatMarketCap(marketData.marketCap)}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className={theme.text.secondary}>24h Volume:</span>
-                <span>${formatNumber(marketData.volume24h)}</span>
-              </div>
-              {marketData.holders > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className={theme.text.secondary}>Holders:</span>
-                  <span>{formatNumber(marketData.holders, 0)}</span>
-                </div>
-              )}
+          <div className="flex-shrink-0">
+            <div className="flex justify-between text-xs">
+              <span className={theme.text.secondary}>Market Cap:</span>
+              <span>{marketData?.marketCap ? formatMarketCap(marketData.marketCap) : '--'}</span>
             </div>
-          )}
+            <div className="flex justify-between text-xs">
+              <span className={theme.text.secondary}>24h Volume:</span>
+              <span>{marketData?.volume24h ? `$${formatNumber(marketData.volume24h)}` : '--'}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className={theme.text.secondary}>Holders:</span>
+              <span>{marketData?.holders ? formatNumber(marketData.holders, 0) : '--'}</span>
+            </div>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex-shrink-0 mt-3">
