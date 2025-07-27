@@ -14,7 +14,15 @@ const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 export default function TokenList() {
   const account = useActiveAccount();
-  const { tokens, loading, error, hasAttemptedFetch, totalUsdValue, retry, refetch } = useTokenBalances(account?.address);
+  const { 
+    tokens, 
+    loading, 
+    error, 
+    hasAttemptedFetch, 
+    totalUsdValue, 
+    retry,
+    invalidateCacheAndRefetch 
+  } = useTokenBalances(account?.address);
   const {
     selectedTokens,
     processing,
@@ -30,7 +38,8 @@ export default function TokenList() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleTransactionSuccess = () => {
-    refetch();
+    // Use cache invalidation and refetch for better data consistency
+    invalidateCacheAndRefetch();
   };
 
   const getDestinationTokenSymbol = () => {

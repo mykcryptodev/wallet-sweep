@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAddress } from 'thirdweb/utils';
+import { getOrSetCache, cacheKeys } from '@/app/lib/cache';
 
 const THIRDWEB_API_URL = 'https://api.thirdweb.com';
 const BASE_CHAIN_ID = 8453; // Base mainnet
@@ -15,6 +16,15 @@ interface ProcessedToken {
   chainId: number;
   priceUsd: number;
   balanceFormatted: number;
+}
+
+interface TokenApiResponse {
+  success: boolean;
+  address: string;
+  chainId: number;
+  tokens: ProcessedToken[];
+  totalUsdValue: number;
+  timestamp: string;
 }
 
 // Helper function to check if an image URL is valid
@@ -104,99 +114,105 @@ export async function GET(
       );
     }
 
-    const processedTokens: ProcessedToken[] = [];
-
-    // Fetch only ERC20 tokens (exclude ETH)
-    const tokensResponse = await fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=50`, {
-      method: 'GET',
-      headers: {
-        'x-client-id': clientId,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Process ERC20 tokens
-    if (tokensResponse.ok) {
-      try {
-        const tokensData = await tokensResponse.json();
+    // Use caching with 5 minute TTL for token balances
+    const cacheKey = cacheKeys.tokens(address);
+    const cachedData = await getOrSetCache<TokenApiResponse>(
+      cacheKey,
+      async () => {
+        console.log(`Fetching fresh token data for ${address}`);
         
-        if (tokensData.result?.tokens) {
-          // Process tokens in batches to avoid overwhelming the server with image validation requests
-          const tokenPromises = tokensData.result.tokens.map(async (token: any) => {
-            const balanceFormatted = parseFloat(token.balance) / Math.pow(10, token.decimals || 18);
-            const priceUsd = token.price_data?.price_usd || 0;
+        const processedTokens: ProcessedToken[] = [];
+
+        // Fetch only ERC20 tokens (exclude ETH)
+        const tokensResponse = await fetch(`${THIRDWEB_API_URL}/v1/wallets/${address}/tokens?chainId=${BASE_CHAIN_ID}&limit=50`, {
+          method: 'GET',
+          headers: {
+            'x-client-id': clientId,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        // Process ERC20 tokens
+        if (tokensResponse.ok) {
+          try {
+            const tokensData = await tokensResponse.json();
             
-            // Only include tokens with meaningful balance
-            if (balanceFormatted > 0.0001) {
-              const logo = await getTokenIcon(token, token.token_address, token.symbol || 'UNKNOWN');
+            if (tokensData.result?.tokens) {
+              // Process tokens in batches to avoid overwhelming the server with image validation requests
+              const tokenPromises = tokensData.result.tokens.map(async (token: any) => {
+                const balanceFormatted = parseFloat(token.balance) / Math.pow(10, token.decimals || 18);
+                const priceUsd = token.price_data?.price_usd || 0;
+                
+                // Only include tokens with meaningful balance
+                if (balanceFormatted > 0.0001) {
+                  const logo = await getTokenIcon(token, token.token_address, token.symbol || 'UNKNOWN');
+                  
+                  return {
+                    address: token.token_address,
+                    symbol: token.symbol || 'UNKNOWN',
+                    name: token.name || 'Unknown Token',
+                    balance: token.balance,
+                    decimals: token.decimals || 18,
+                    logo,
+                    value: balanceFormatted * priceUsd,
+                    chainId: BASE_CHAIN_ID,
+                    priceUsd: priceUsd,
+                    balanceFormatted: balanceFormatted
+                  };
+                }
+                return null;
+              });
               
-              return {
-                address: token.token_address,
-                symbol: token.symbol || 'UNKNOWN',
-                name: token.name || 'Unknown Token',
-                balance: token.balance,
-                decimals: token.decimals || 18,
-                logo,
-                value: balanceFormatted * priceUsd,
-                chainId: BASE_CHAIN_ID,
-                priceUsd: priceUsd,
-                balanceFormatted: balanceFormatted
-              };
+              // Wait for all token processing to complete
+              const results = await Promise.all(tokenPromises);
+              
+              // Filter out null results and add to processedTokens
+              results.forEach(result => {
+                if (result) {
+                  processedTokens.push(result);
+                }
+              });
             }
-            return null;
-          });
-          
-          // Wait for all token processing to complete
-          const results = await Promise.all(tokenPromises);
-          
-          // Filter out null results and add to processedTokens
-          results.forEach(result => {
-            if (result) {
-              processedTokens.push(result);
-            }
-          });
+          } catch (tokensError) {
+            console.error('Error processing tokens:', tokensError);
+          }
         }
-      } catch (tokensError) {
-        console.error('Error processing tokens:', tokensError);
-      }
-    }
 
-    // Handle API errors
-    if (!tokensResponse.ok) {
-      const tokensError = await tokensResponse.text();
-      console.error('API call failed:', { tokensError });
-      
-      if (tokensResponse.status === 401) {
-        return NextResponse.json(
-          { error: 'Authentication failed. Please check your client ID.' },
-          { status: 401 }
-        );
-      }
-      
-      return NextResponse.json(
-        { error: 'Failed to fetch wallet data from Thirdweb API' },
-        { status: 500 }
-      );
-    }
+        // Handle API errors
+        if (!tokensResponse.ok) {
+          const tokensError = await tokensResponse.text();
+          console.error('API call failed:', { tokensError });
+          
+          if (tokensResponse.status === 401) {
+            throw new Error('Authentication failed. Please check your client ID.');
+          }
+          
+          throw new Error('Failed to fetch wallet data from Thirdweb API');
+        }
 
-    // Sort tokens by USD value (highest first)
-    processedTokens.sort((a, b) => b.value - a.value);
+        // Sort tokens by USD value (highest first)
+        processedTokens.sort((a, b) => b.value - a.value);
 
-    console.log(`Successfully processed ${processedTokens.length} tokens for ${address}`);
+        console.log(`Successfully processed ${processedTokens.length} tokens for ${address}`);
 
-    return NextResponse.json({
-      success: true,
-      address,
-      chainId: BASE_CHAIN_ID,
-      tokens: processedTokens,
-      totalUsdValue: processedTokens.reduce((sum, token) => sum + token.value, 0),
-      timestamp: new Date().toISOString(),
-    });
+        return {
+          success: true,
+          address,
+          chainId: BASE_CHAIN_ID,
+          tokens: processedTokens,
+          totalUsdValue: processedTokens.reduce((sum, token) => sum + token.value, 0),
+          timestamp: new Date().toISOString(),
+        };
+      },
+      { ttl: 300 } // 5 minute cache TTL
+    );
+
+    return NextResponse.json(cachedData);
 
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

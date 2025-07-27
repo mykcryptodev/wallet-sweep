@@ -5,6 +5,7 @@ import { client } from "../client";
 import { Bridge } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { ProcessedToken, Call } from "../types/token";
+import { useCache } from "./useCache";
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -13,6 +14,9 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState(false);
   const [destinationToken, setDestinationToken] = useState<string>(USDC_ADDRESS);
+  
+  // Cache utilities
+  const { invalidateWalletCache } = useCache();
 
   // Use thirdweb's useSendCalls hook for EIP-5792 batch transactions
   const { mutate: sendCalls, isPending: executing, data: sendCallsData } = useSendCalls();
@@ -111,9 +115,22 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
       sendCalls({
         calls: preparedCalls,
       }, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           console.log("Batch transaction sent successfully:", data);
           alert(`Successfully initiated batch sell for ${tokensToSell.length} tokens! 🎉`);
+          
+          // Invalidate cache after successful sell
+          try {
+            console.log('Invalidating cache after successful sell for wallet:', account.address);
+            const result = await invalidateWalletCache(account.address);
+            if (result.success) {
+              console.log('Cache invalidated successfully after sell');
+            } else {
+              console.error('Failed to invalidate cache after sell:', result.error);
+            }
+          } catch (error) {
+            console.error('Error invalidating cache after sell:', error);
+          }
           
           // Reset state
           setSelectedTokens(new Set());

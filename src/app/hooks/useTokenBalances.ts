@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ProcessedToken, ApiResponse } from "../types/token";
+import { useCache } from "./useCache";
 
 export const useTokenBalances = (accountAddress: string | undefined) => {
   const [tokens, setTokens] = useState<ProcessedToken[]>([]);
@@ -7,6 +8,9 @@ export const useTokenBalances = (accountAddress: string | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const [totalUsdValue, setTotalUsdValue] = useState(0);
+  
+  // Cache utilities
+  const { invalidateWalletCache, invalidating } = useCache();
 
   const fetchTokenBalances = useCallback(async () => {
     if (!accountAddress || loading) return;
@@ -49,6 +53,25 @@ export const useTokenBalances = (accountAddress: string | undefined) => {
     fetchTokenBalances();
   }, [fetchTokenBalances]);
 
+  // Function to invalidate cache and refetch tokens
+  const invalidateCacheAndRefetch = useCallback(async () => {
+    if (!accountAddress) return;
+    
+    try {
+      console.log('Invalidating cache for wallet:', accountAddress);
+      const result = await invalidateWalletCache(accountAddress);
+      
+      if (result.success) {
+        console.log('Cache invalidated successfully, refetching tokens');
+        await fetchTokenBalances();
+      } else {
+        console.error('Failed to invalidate cache:', result.error);
+      }
+    } catch (error) {
+      console.error('Error invalidating cache:', error);
+    }
+  }, [accountAddress, invalidateWalletCache, fetchTokenBalances]);
+
   useEffect(() => {
     if (accountAddress && !hasAttemptedFetch) {
       fetchTokenBalances();
@@ -62,11 +85,12 @@ export const useTokenBalances = (accountAddress: string | undefined) => {
 
   return {
     tokens,
-    loading,
+    loading: loading || invalidating,
     error,
     hasAttemptedFetch,
     totalUsdValue,
     retry,
-    refetch: fetchTokenBalances
+    refetch: fetchTokenBalances,
+    invalidateCacheAndRefetch,
   };
 }; 
