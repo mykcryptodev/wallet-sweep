@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCache } from '../hooks/useCache';
+import { toast } from 'react-toastify';
 
 interface CacheStatusProps {
   walletAddress?: string;
@@ -38,7 +39,9 @@ export function CacheStatus({ walletAddress }: CacheStatusProps) {
       setStatus(data);
     } catch (error) {
       console.error('Error checking cache status:', error);
-      setError(error instanceof Error ? error.message : 'Failed to check cache status');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check cache status';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -53,11 +56,15 @@ export function CacheStatus({ walletAddress }: CacheStatusProps) {
         // Refresh status after invalidation
         await checkCacheStatus();
       } else {
-        setError(result.error || 'Failed to invalidate cache');
+        const errorMessage = result.error || 'Failed to invalidate cache';
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error invalidating cache:', error);
-      setError('Failed to invalidate cache');
+      const errorMessage = 'Failed to invalidate cache';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

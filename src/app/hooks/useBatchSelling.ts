@@ -6,6 +6,7 @@ import { Bridge } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { ProcessedToken, Call } from "../types/token";
 import { useCache } from "./useCache";
+import { toast } from "react-toastify";
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -57,7 +58,7 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     );
 
     if (tokensToSell.length === 0) {
-      alert("No tokens to sell - all selected tokens are already USDC!");
+      toast.warning("No tokens to sell - all selected tokens are already USDC!");
       setProcessing(false);
       return;
     }
@@ -117,7 +118,7 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
       }, {
         onSuccess: async (data) => {
           console.log("Batch transaction sent successfully:", data);
-          alert(`Successfully initiated batch sell for ${tokensToSell.length} tokens! 🎉`);
+          toast.success(`Successfully initiated batch sell for ${tokensToSell.length} tokens! 🎉`);
           
           // Invalidate cache after successful sell
           try {
@@ -139,13 +140,13 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
         },
         onError: (error) => {
           console.error("Batch transaction failed:", error);
-          alert(`Error executing batch transaction: ${error.message}`);
+          toast.error(`Error executing batch transaction: ${error.message}`);
         }
       });
 
     } catch (error) {
       console.error("Error preparing batch transaction:", error);
-      alert(`Error preparing batch transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Error preparing batch transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setProcessing(false);
     }

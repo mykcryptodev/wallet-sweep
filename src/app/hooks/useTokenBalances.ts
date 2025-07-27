@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ProcessedToken, ApiResponse } from "../types/token";
 import { useCache } from "./useCache";
+import { toast } from "react-toastify";
 
 export const useTokenBalances = (accountAddress: string | undefined) => {
   const [tokens, setTokens] = useState<ProcessedToken[]>([]);
@@ -40,8 +41,10 @@ export const useTokenBalances = (accountAddress: string | undefined) => {
       
     } catch (error) {
       console.error("Error fetching token balances:", error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch token balances');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch token balances';
+      setError(errorMessage);
       setHasAttemptedFetch(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
