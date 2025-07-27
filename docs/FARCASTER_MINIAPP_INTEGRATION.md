@@ -1,14 +1,31 @@
 # Farcaster Mini App Integration
 
-This document describes the integration of Wallet Sweep as a Farcaster mini app.
+This document describes the integration of Wallet Sweep as a Farcaster mini app using the official @farcaster/miniapp-sdk.
 
 ## Overview
 
-Wallet Sweep has been configured as a Farcaster mini app, allowing it to be embedded and launched from Farcaster clients. Users can discover the app through social feeds and add it to their Farcaster client for quick access.
+Wallet Sweep has been configured as a Farcaster mini app, allowing it to be embedded and launched from Farcaster clients. Users can discover the app through social feeds and add it to their Farcaster client for quick access. The integration now uses the official Farcaster Mini App SDK for enhanced functionality and native features.
 
 ## Implementation Details
 
-### 1. Mini App Embed Metatags
+### 1. Farcaster Mini App SDK Integration
+
+The app now uses the official `@farcaster/miniapp-sdk` for native Farcaster functionality:
+
+- **SDK Initialization**: The SDK is initialized in `FarcasterProvider.tsx` which wraps the entire app
+- **Ready Signal**: The app calls `sdk.actions.ready()` on load to hide the splash screen
+- **Haptic Feedback**: All haptic feedback now uses `sdk.actions.haptics('light')` instead of manual `navigator.vibrate()`
+- **Context Provider**: A React context provides SDK functionality throughout the app
+
+Key features provided by the SDK:
+- Native haptic feedback with different intensity levels
+- Authentication and user context
+- Wallet interactions (Ethereum/Solana)
+- Share functionality
+- Events and notifications
+- Back navigation handling
+
+### 2. Mini App Embed Metatags
 
 The app includes the required metatags in `src/app/layout.tsx`:
 
@@ -94,8 +111,9 @@ To test your mini app integration:
 
 1. Generate proper account association signature
 2. Test the mini app in a Farcaster client
-3. Consider implementing the SDK for enhanced functionality:
-   - User authentication with SIWE
-   - Access to Farcaster context
-   - Native sharing capabilities
-   - Push notifications
+3. Extend SDK functionality:
+   - Implement user authentication with the SDK's auth features
+   - Add native sharing capabilities using `sdk.actions.share()`
+   - Implement wallet interactions for on-chain operations
+   - Add push notifications support
+   - Use SDK events for better app lifecycle management

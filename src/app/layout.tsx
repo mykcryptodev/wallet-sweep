@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FarcasterProvider } from './providers/FarcasterProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -52,7 +53,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThirdwebProvider>{children}</ThirdwebProvider>
+        <ThirdwebProvider>
+          <FarcasterProvider>
+            {children}
+          </FarcasterProvider>
+        </ThirdwebProvider>
         <ToastContainer
           position="top-right"
           autoClose={5000}
