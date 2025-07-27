@@ -607,18 +607,6 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                 Keep
               </button>
             </div>
-            
-            {/* Swipe Direction Hints */}
-            <div className="flex justify-between items-center mt-2 text-xs opacity-60">
-              <div className="flex items-center">
-                <span className="mr-1">👎</span>
-                <span>Swipe left to sell</span>
-              </div>
-              <div className="flex items-center">
-                <span>Swipe right to keep</span>
-                <span className="ml-1">👍</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
