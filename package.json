@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.1.8",
     "@upstash/redis": "^1.35.1",
     "next": "14.1.0",
     "react": "^18.3",
