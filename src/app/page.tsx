@@ -157,11 +157,12 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     const offsetX = touch.clientX - startPos.x;
     const offsetY = touch.clientY - startPos.y;
     
-    setDragOffset({ x: offsetX, y: offsetY });
+    // Only track horizontal movement, ignore vertical movement
+    setDragOffset({ x: offsetX, y: 0 });
     
-    // Calculate velocity
-    const newVelocity = calculateVelocity({ x: touch.clientX, y: touch.clientY }, currentTime);
-    setVelocity(newVelocity);
+    // Calculate velocity only for horizontal movement
+    const newVelocity = calculateVelocity({ x: touch.clientX, y: startPos.y }, currentTime);
+    setVelocity({ x: newVelocity.x, y: 0 });
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -181,11 +182,11 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     if (dragOffset.x > threshold || finalVelocity.x > 0.8) {
       triggerHaptic();
       onSwipeRight();
-      animateCard(screenWidth * 1.5, dragOffset.y, 200);
+      animateCard(screenWidth * 1.5, 0, 200);
     } else if (dragOffset.x < -threshold || finalVelocity.x < -0.8) {
       triggerHaptic();
       onSwipeLeft();
-      animateCard(-screenWidth * 1.5, dragOffset.y, 200);
+      animateCard(-screenWidth * 1.5, 0, 200);
     } else {
       // Snap back to center
       animateCard(0, 0, 300);
@@ -207,11 +208,12 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     const offsetX = e.clientX - startPos.x;
     const offsetY = e.clientY - startPos.y;
     
-    setDragOffset({ x: offsetX, y: offsetY });
+    // Only track horizontal movement, ignore vertical movement
+    setDragOffset({ x: offsetX, y: 0 });
     
-    // Calculate velocity
-    const newVelocity = calculateVelocity({ x: e.clientX, y: e.clientY }, currentTime);
-    setVelocity(newVelocity);
+    // Calculate velocity only for horizontal movement
+    const newVelocity = calculateVelocity({ x: e.clientX, y: startPos.y }, currentTime);
+    setVelocity({ x: newVelocity.x, y: 0 });
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -228,10 +230,10 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     
     if (dragOffset.x > threshold || finalVelocity.x > 0.5) {
       onSwipeRight();
-      animateCard(screenWidth * 1.5, dragOffset.y, 200);
+      animateCard(screenWidth * 1.5, 0, 200);
     } else if (dragOffset.x < -threshold || finalVelocity.x < -0.5) {
       onSwipeLeft();
-      animateCard(-screenWidth * 1.5, dragOffset.y, 200);
+      animateCard(-screenWidth * 1.5, 0, 200);
     } else {
       animateCard(0, 0, 300);
     }
@@ -478,7 +480,18 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerHaptic();
-                  onSwipeLeft();
+                  // For button clicks, start from center and animate smoothly
+                  const screenWidth = window.innerWidth;
+                  // Start with a small offset to make it feel more natural
+                  setDragOffset({ x: -20, y: 0 });
+                  // Then animate off screen to the left
+                  setTimeout(() => {
+                    animateCard(-screenWidth * 1.5, 0, 300);
+                    // Call the action after animation starts
+                    setTimeout(() => {
+                      onSwipeLeft();
+                    }, 150);
+                  }, 50);
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-red-500 hover:bg-red-600 text-white"
               >
@@ -488,7 +501,18 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerHaptic();
-                  onSwipeRight();
+                  // For button clicks, start from center and animate smoothly
+                  const screenWidth = window.innerWidth;
+                  // Start with a small offset to make it feel more natural
+                  setDragOffset({ x: 20, y: 0 });
+                  // Then animate off screen to the right
+                  setTimeout(() => {
+                    animateCard(screenWidth * 1.5, 0, 300);
+                    // Call the action after animation starts
+                    setTimeout(() => {
+                      onSwipeRight();
+                    }, 150);
+                  }, 50);
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-colors bg-green-500 hover:bg-green-600 text-white"
               >
