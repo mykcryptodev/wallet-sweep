@@ -8,6 +8,7 @@ import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { ErrorDisplay } from "./ui/ErrorDisplay";
 import { EmptyState } from "./ui/EmptyState";
 import { useState, useEffect, useRef } from "react";
+import { NATIVE_TOKEN_ADDRESS } from "thirdweb";
 
 // USDC contract address on Base
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -131,14 +132,16 @@ export default function TokenList() {
         ) : tokens.length === 0 && hasAttemptedFetch ? (
           <EmptyState onRetry={retry} />
         ) : (
-          tokens.map((token) => (
-            <TokenDisplay
-              key={token.address}
-              token={token}
-              isSelected={selectedTokens.has(token.address)}
-              onSelect={() => handleTokenSelect(token.address)}
-            />
-          ))
+          tokens
+            .filter(token => token.symbol !== "ETH" && token.address !== NATIVE_TOKEN_ADDRESS)
+            .map((token) => (
+              <TokenDisplay
+                key={token.address}
+                token={token}
+                isSelected={selectedTokens.has(token.address)}
+                onSelect={() => handleTokenSelect(token.address)}
+              />
+            ))
         )}
       </div>
 
