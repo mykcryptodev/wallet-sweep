@@ -132,62 +132,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault(); // Prevent scrolling
-    const touch = e.touches[0];
-    const currentTime = performance.now();
-    
-    setStartPos({ x: touch.clientX, y: touch.clientY });
-    setStartTime(currentTime);
-    lastTouchTimeRef.current = currentTime;
-    setIsDragging(true);
-    setVelocity({ x: 0, y: 0 });
-  };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || isAnimating) return;
-    e.preventDefault(); // Prevent scrolling
-    
-    const touch = e.touches[0];
-    const currentTime = performance.now();
-    const offsetX = touch.clientX - startPos.x;
-    const offsetY = touch.clientY - startPos.y;
-    
-    // Only track horizontal movement, ignore vertical movement
-    setDragOffset({ x: offsetX, y: 0 });
-    
-    // Calculate velocity only for horizontal movement
-    const newVelocity = calculateVelocity({ x: touch.clientX, y: startPos.y }, currentTime);
-    setVelocity({ x: newVelocity.x, y: 0 });
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isDragging || isAnimating) return;
-    e.preventDefault();
-    
-    const currentTime = performance.now();
-    const finalVelocity = calculateVelocity(dragOffset, currentTime);
-    
-    // Dynamic threshold based on screen width and velocity
-    const screenWidth = window.innerWidth;
-    const baseThreshold = screenWidth * 0.25; // 25% of screen width
-    const velocityThreshold = Math.abs(finalVelocity.x) * 0.5; // Velocity bonus
-    const threshold = Math.max(baseThreshold - velocityThreshold, screenWidth * 0.15); // Min 15%
-    
-    // Determine swipe direction and trigger action
-    if (dragOffset.x > threshold || finalVelocity.x > 0.8) {
-      triggerHaptic();
-      onSwipeRight();
-      animateCard(screenWidth * 1.5, 0, 200);
-    } else if (dragOffset.x < -threshold || finalVelocity.x < -0.8) {
-      triggerHaptic();
-      onSwipeLeft();
-      animateCard(-screenWidth * 1.5, 0, 200);
-    } else {
-      // Snap back to center
-      animateCard(0, 0, 300);
-    }
-  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const currentTime = performance.now();
@@ -258,6 +203,81 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
     setVelocity({ x: 0, y: 0 });
     setIsFadingIn(true); // Start fade-in animation
   }, [token.address]); // Reset when token changes
+
+  // Add touch event listeners with passive: false to allow preventDefault
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element) return;
+
+    const handleTouchStartNative = (e: TouchEvent) => {
+      e.preventDefault(); // Prevent scrolling
+      const touch = e.touches[0];
+      const currentTime = performance.now();
+      
+      setStartPos({ x: touch.clientX, y: touch.clientY });
+      setStartTime(currentTime);
+      lastTouchTimeRef.current = currentTime;
+      setIsDragging(true);
+      setVelocity({ x: 0, y: 0 });
+    };
+
+    const handleTouchMoveNative = (e: TouchEvent) => {
+      if (!isDragging || isAnimating) return;
+      e.preventDefault(); // Prevent scrolling
+      
+      const touch = e.touches[0];
+      const currentTime = performance.now();
+      const offsetX = touch.clientX - startPos.x;
+      const offsetY = touch.clientY - startPos.y;
+      
+      // Only track horizontal movement, ignore vertical movement
+      setDragOffset({ x: offsetX, y: 0 });
+      
+      // Calculate velocity only for horizontal movement
+      const newVelocity = calculateVelocity({ x: touch.clientX, y: startPos.y }, currentTime);
+      setVelocity({ x: newVelocity.x, y: 0 });
+    };
+
+    const handleTouchEndNative = (e: TouchEvent) => {
+      if (!isDragging || isAnimating) return;
+      e.preventDefault();
+      
+      const currentTime = performance.now();
+      const finalVelocity = calculateVelocity(dragOffset, currentTime);
+      
+      // Dynamic threshold based on screen width and velocity
+      const screenWidth = window.innerWidth;
+      const baseThreshold = screenWidth * 0.25; // 25% of screen width
+      const velocityThreshold = Math.abs(finalVelocity.x) * 0.5; // Velocity bonus
+      const threshold = Math.max(baseThreshold - velocityThreshold, screenWidth * 0.15); // Min 15%
+      
+      // Determine swipe direction and trigger action
+      if (dragOffset.x > threshold || finalVelocity.x > 0.8) {
+        triggerHaptic();
+        onSwipeRight();
+        animateCard(screenWidth * 1.5, 0, 200);
+      } else if (dragOffset.x < -threshold || finalVelocity.x < -0.8) {
+        triggerHaptic();
+        onSwipeLeft();
+        animateCard(-screenWidth * 1.5, 0, 200);
+      } else {
+        // Snap back to center
+        animateCard(0, 0, 300);
+      }
+    };
+
+    // Add event listeners with passive: false
+    element.addEventListener('touchstart', handleTouchStartNative, { passive: false });
+    element.addEventListener('touchmove', handleTouchMoveNative, { passive: false });
+    element.addEventListener('touchend', handleTouchEndNative, { passive: false });
+
+    // Cleanup
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStartNative);
+      element.removeEventListener('touchmove', handleTouchMoveNative);
+      element.removeEventListener('touchend', handleTouchEndNative);
+    };
+  }, [isDragging, isAnimating, startPos, dragOffset, onSwipeLeft, onSwipeRight, triggerHaptic]);
 
   const getRotation = () => {
     const rotation = (dragOffset.x / 20) * (dragOffset.x > 0 ? 1 : -1);
@@ -362,9 +382,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
         opacity: getOpacity() * getFadeInOpacity(),
         transition: isAnimating ? 'none' : 'transform 0.1s ease-out, opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), scale 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
