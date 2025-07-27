@@ -58,7 +58,9 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     if (!account) return;
     
     setProcessing(true);
+    
     const selectedTokensList = tokens.filter(token => selectedTokens.has(token.address));
+    
     const tokensToSell = selectedTokensList.filter(token => 
       token.symbol !== "USDC" && token.symbol !== "USDbC"
     );

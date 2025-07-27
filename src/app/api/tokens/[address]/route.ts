@@ -259,7 +259,7 @@ export async function GET(
         }
 
         // Sort tokens by USD value (highest first)
-        processedTokens.sort((a, b) => b.value - a.value);
+        processedTokens.sort((a, b) => (b?.value || 0) - (a?.value || 0));
 
         console.log(`Successfully processed ${processedTokens.length} tokens for ${address}`);
 
