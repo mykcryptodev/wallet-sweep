@@ -475,13 +475,6 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
 
         {/* Token Details */}
         <div className="p-3 flex-1 flex flex-col justify-between gap-3">
-          {/* Value */}
-          <div className="text-center mb-3">
-            <div className="text-xl font-bold">
-              ${token.value.toFixed(2)}
-            </div>
-          </div>
-
           {/* Portfolio Info - Box Layout */}
           <div className="flex-shrink-0">
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -489,7 +482,7 @@ function TokenCard({ token, onSwipeLeft, onSwipeRight, isVisible, isSelected }: 
               <div className={`p-3 rounded-xl ${theme.background.primary} border border-gray-700/30 text-center`}>
                 <div className="text-xs text-gray-400 mb-1">Balance</div>
                 <div className="font-semibold text-sm">
-                  {formatTokenBalance(token.balance, token.decimals || 18)} {token.symbol}
+                  ${token.value.toFixed(2)}
                 </div>
               </div>
               
