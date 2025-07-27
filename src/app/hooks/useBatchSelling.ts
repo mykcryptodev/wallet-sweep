@@ -66,16 +66,34 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
     try {
       console.log(`Preparing to sell ${tokensToSell.length} tokens in a single batch transaction...`);
       
-      const quotesWithTokens = [];
+      const quotesWithTokens: { token: ProcessedToken; quote: any }[] = [];
+      const failedQuotes: ProcessedToken[] = [];
+      
+      // Get quotes for all tokens, tracking which ones fail
       for (const token of tokensToSell) {
         console.log(`Getting quote for ${token.symbol}...`);
         const quote = await getSellQuote(token);
         
         if (!quote) {
-          throw new Error(`Failed to get sell quote for ${token.symbol}`);
+          console.warn(`Failed to get sell quote for ${token.symbol}`);
+          failedQuotes.push(token);
+          toast.warning(`Could not get quote for ${token.symbol} - it will be skipped`);
+        } else {
+          quotesWithTokens.push({ token, quote });
         }
-        
-        quotesWithTokens.push({ token, quote });
+      }
+
+      // If no quotes succeeded, show error and return
+      if (quotesWithTokens.length === 0) {
+        toast.error("Failed to get quotes for all selected tokens. Please try again.");
+        setProcessing(false);
+        return;
+      }
+
+      // If some quotes failed, show summary to user
+      if (failedQuotes.length > 0) {
+        const failedSymbols = failedQuotes.map(token => token.symbol).join(", ");
+        toast.info(`Proceeding with ${quotesWithTokens.length} tokens. Failed to get quotes for: ${failedSymbols}`);
       }
 
       const calls: Call[] = [];
@@ -112,13 +130,27 @@ export const useBatchSelling = (account: any, tokens: ProcessedToken[]) => {
 
       console.log("Executing batch with calls using useSendCalls:", preparedCalls);
 
+      // Capture the successful quotes and failed quotes for the success message
+      const successfulQuotes = quotesWithTokens;
+      const failedQuotesForMessage = failedQuotes;
+
       // Use the useSendCalls hook to execute all calls in a single transaction
       sendCalls({
         calls: preparedCalls,
       }, {
         onSuccess: async (data) => {
           console.log("Batch transaction sent successfully:", data);
-          toast.success(`Successfully initiated batch sell for ${tokensToSell.length} tokens! 🎉`);
+          
+          // Show success message with details about what was sold
+          const soldTokens = successfulQuotes.map(({ token }) => token.symbol).join(", ");
+          const successMessage = `Successfully initiated batch sell for ${successfulQuotes.length} tokens: ${soldTokens}! 🎉`;
+          
+          if (failedQuotesForMessage.length > 0) {
+            const failedSymbols = failedQuotesForMessage.map(token => token.symbol).join(", ");
+            toast.success(`${successMessage} (Skipped: ${failedSymbols})`);
+          } else {
+            toast.success(successMessage);
+          }
           
           // Invalidate cache after successful sell
           try {
