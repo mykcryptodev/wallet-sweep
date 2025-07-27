@@ -1,119 +1,167 @@
 # Swipe Mode Feature
 
-## Overview
-
-The Swipe Mode feature provides a Tinder-like interface for managing tokens in your wallet. Users can swipe through their tokens one by one, making quick decisions to either sell or keep each token.
+The Swipe Mode feature provides an intuitive, Tinder-like interface for managing tokens in your wallet. Users can quickly swipe through their tokens to decide which ones to keep or sell.
 
 ## Features
 
-### 🎯 Tinder-like Interface
-- **Card-based Design**: Each token is displayed on a beautiful card with gradient background
-- **Swipe Gestures**: 
-  - Swipe left to mark token for sale
-  - Swipe right to keep token in wallet
-- **Touch & Mouse Support**: Works on both mobile and desktop devices
+### Core Functionality
+- **Swipe Left**: Sell the token immediately
+- **Swipe Right**: Keep the token
+- **Touch & Mouse Support**: Works on both mobile and desktop
 - **Visual Feedback**: Cards rotate and fade based on swipe direction
+- **Progress Tracking**: Shows current position in the token list
 
-### 📊 Token Information Display
-- **Token Logo**: Displays token logo or fallback to symbol initial
-- **Token Details**: Shows symbol, name, balance, value, and price
-- **Progress Tracking**: Shows current position and total tokens to review
+### Pagination Support
+- **Automatic Loading**: Fetches next page when approaching the end of current tokens
+- **Seamless Experience**: New tokens load in the background without interrupting the swipe flow
+- **Loading Indicators**: Shows when more tokens are being fetched
+- **Progress Display**: Indicates when more tokens are available
 
-### 🚀 Individual Token Selling
-- **Instant Selling**: Tokens are sold immediately when swiped left
-- **Smart Filtering**: Automatically excludes ETH, USDC, and USDbC from swipeable tokens
-- **Real Transactions**: Uses Bridge API to execute actual token sales
-- **Real-time Feedback**: Users see immediate confirmation of their actions
+### Token Filtering
+- **Excludes Native ETH**: ETH tokens are filtered out from the swipe interface
+- **Excludes USDC**: USDC tokens are protected from accidental selling
+- **Value Threshold**: Only shows tokens with meaningful USD value
 
-## User Flow
+## User Interface
 
-1. **Connect Wallet**: User connects their wallet on the main page
-2. **Navigate to Swipe Mode**: Click the "🎯 Swipe Mode" button
-3. **Review Tokens**: Swipe through each token one by one
-4. **Make Decisions**: 
-   - Swipe left (✕) to sell immediately
-   - Swipe right (✓) to keep
-5. **View Results**: Review transaction summary modal for each sale
+### Card Design
+- **Token Image**: Displays token logo or fallback symbol
+- **Token Information**: Shows symbol, name, balance, value, and price
+- **Swipe Instructions**: Clear visual indicators for swipe actions
+- **Gradient Background**: Attractive visual design
+
+### Progress Display
+- **Current Position**: Shows "X of Y" tokens reviewed
+- **Loading Status**: Indicates when more tokens are being fetched
+- **Selling Status**: Shows when a token is being sold
+
+### Visual Feedback
+- **Swipe Animation**: Cards move and rotate based on drag distance
+- **Opacity Changes**: Cards fade as they're swiped
+- **Threshold Detection**: Requires minimum swipe distance to trigger action
 
 ## Technical Implementation
 
-### Components
-
-#### `TokenCard` Component
-- Handles touch and mouse events for swipe gestures
-- Manages drag state and visual feedback
-- Implements smooth animations and transitions
-
-#### `SwipePage` Component
-- Main page component managing token state
-- Integrates with existing hooks (`useTokenBalances`, `useBatchSelling`)
-- Handles individual token selling on swipe left
-- Manages navigation and user flow
-
-### Key Features
-
-#### Swipe Detection
+### State Management
 ```typescript
-const threshold = 100;
-if (dragOffset.x > threshold) {
-  onSwipeRight(); // Keep token
-} else if (dragOffset.x < -threshold) {
-  onSwipeLeft(); // Sell token immediately via Bridge API
+const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
+const [sellingToken, setSellingToken] = useState<string | null>(null);
+```
+
+### Pagination Logic
+```typescript
+useEffect(() => {
+  // If we're within 3 tokens of the end and there are more tokens to load
+  if (hasMore && !loadingMore && currentTokenIndex >= swipeableTokens.length - 3) {
+    console.log('Loading more tokens...');
+    loadMore();
+  }
+}, [currentTokenIndex, swipeableTokens.length, hasMore, loadingMore, loadMore]);
+```
+
+### Swipe Detection
+- **Touch Events**: `onTouchStart`, `onTouchMove`, `onTouchEnd`
+- **Mouse Events**: `onMouseDown`, `onMouseMove`, `onMouseUp`
+- **Threshold**: 100px minimum swipe distance
+- **Direction**: Left for sell, right for keep
+
+### Token Selling
+- **Bridge Integration**: Uses thirdweb Bridge for token swaps
+- **USDC Destination**: All tokens are sold for USDC
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Cache Invalidation**: Refreshes token list after successful sales
+
+## API Integration
+
+### Token Fetching
+- **Pagination Support**: Fetches tokens in pages of 50 by default
+- **Automatic Loading**: Triggers when user approaches end of current list
+- **Caching**: Uses Redis cache for performance
+- **Fallback**: Falls back to thirdweb API if Zapper fails
+
+### Response Format
+```typescript
+interface TokenApiResponse {
+  success: boolean;
+  address: string;
+  chainId: number;
+  tokens: ProcessedToken[];
+  totalUsdValue: number;
+  timestamp: string;
+  hasMore: boolean;
+  nextPage?: number;
+  error?: string;
 }
 ```
 
-#### Visual Feedback
-- **Rotation**: Cards rotate based on drag direction
-- **Opacity**: Cards fade as they're dragged away
-- **Smooth Transitions**: CSS transitions for fluid animations
+## User Experience
 
-#### State Management
-- **Current Index**: Tracks which token is being displayed
-- **Selling State**: Tracks currently selling token with loading indicator
-- **Progress**: Shows completion status and swipe instructions
+### Mobile Experience
+- **Touch Gestures**: Natural swipe gestures on mobile devices
+- **Responsive Design**: Optimized for mobile screens
+- **Visual Feedback**: Clear animations and transitions
 
-## Integration Points
+### Desktop Experience
+- **Mouse Support**: Full mouse drag support
+- **Keyboard Shortcuts**: Can be extended for keyboard navigation
+- **Large Screens**: Optimized for desktop displays
 
-### Existing Hooks
-- `useTokenBalances`: Fetches and manages token data
-- `useBatchSelling`: Handles the actual selling process
-- `useCache`: Manages cache invalidation after sales
+### Error Handling
+- **Network Errors**: Graceful handling of API failures
+- **Transaction Errors**: Clear error messages for failed sales
+- **Loading States**: Visual feedback during operations
 
-### UI Components
-- `LoadingSpinner`: Shows loading states
-- `ErrorDisplay`: Handles error states
-- `EmptyState`: Shows when no tokens available
-- `TradeSummaryModal`: Displays transaction results
+## Performance Considerations
 
-## File Structure
+### Pagination Strategy
+- **Proactive Loading**: Loads next page before user reaches the end
+- **Efficient Caching**: Uses Redis cache to avoid redundant API calls
+- **Debounced Requests**: Prevents rapid successive API calls
 
-```
-src/app/swipe/
-└── page.tsx          # Main swipe page component
-
-src/app/page.tsx      # Updated with navigation link
-```
-
-## Usage
-
-1. **Access**: Navigate to `/swipe` or click "🎯 Swipe Mode" on main page
-2. **Connect**: Ensure wallet is connected
-3. **Swipe**: Use touch or mouse to swipe through tokens
-4. **Sell**: Swipe left to sell tokens immediately
-5. **Review**: Check transaction summary for each sale
-
-## Benefits
-
-- **Intuitive Interface**: Familiar Tinder-like interaction pattern
-- **Quick Decisions**: Streamlined token review process
-- **Mobile Friendly**: Optimized for touch interactions
-- **Instant Feedback**: Immediate selling provides real-time confirmation
-- **Visual Appeal**: Beautiful card-based design with animations
+### Memory Management
+- **Token Filtering**: Only loads tokens that meet criteria
+- **Efficient Rendering**: Only renders visible token cards
+- **State Cleanup**: Proper cleanup of event listeners
 
 ## Future Enhancements
 
-- **Swipe Animations**: Add more sophisticated swipe animations
-- **Token Categories**: Group tokens by type or value
-- **Swipe History**: Track previous swipe decisions
-- **Custom Thresholds**: Allow users to adjust swipe sensitivity
-- **Haptic Feedback**: Add vibration feedback on mobile devices 
+### Potential Improvements
+1. **Batch Operations**: Allow selecting multiple tokens for batch selling
+2. **Custom Thresholds**: Let users set minimum value thresholds
+3. **Token Categories**: Group tokens by type or value
+4. **Analytics**: Track user behavior and preferences
+5. **Keyboard Navigation**: Add keyboard shortcuts for power users
+
+### Advanced Features
+- **Undo Functionality**: Allow users to undo recent actions
+- **Favorites**: Let users mark tokens as favorites
+- **Custom Lists**: Create custom token lists
+- **Export Data**: Export token decisions and analytics
+
+## Troubleshooting
+
+### Common Issues
+1. **Tokens Not Loading**: Check network connection and API status
+2. **Swipe Not Working**: Ensure touch/mouse events are properly bound
+3. **Sales Failing**: Verify wallet connection and gas fees
+4. **Pagination Issues**: Check API response format and pagination logic
+
+### Debug Information
+- **Console Logs**: Detailed logging for debugging
+- **Network Tab**: Monitor API requests and responses
+- **State Inspection**: Check React DevTools for state issues
+
+## Integration Points
+
+### Dependencies
+- **thirdweb**: Wallet connection and transaction execution
+- **React**: UI framework and state management
+- **Redis**: Caching for performance
+- **Zapper API**: Token data fetching
+- **Bridge API**: Token swapping functionality
+
+### Configuration
+- **Environment Variables**: API keys and endpoints
+- **Theme System**: Consistent visual design
+- **Error Boundaries**: Graceful error handling
+- **Loading States**: User feedback during operations 

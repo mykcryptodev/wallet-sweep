@@ -44,8 +44,8 @@ export const useTokenBalances = (accountAddress: string | undefined) => {
           if (page > 0) {
             params.append('page', page.toString());
           }
-          // Always use pagination to avoid rate limiting - don't fetch all at once
-          params.append('fetchAll', 'false');
+          // Add minimum balance threshold to filter out dust (1 cent minimum)
+          params.append('minBalanceUSD', '0.01');
 
           const response = await fetch(`/api/tokens/${accountAddress}?${params.toString()}`);
           

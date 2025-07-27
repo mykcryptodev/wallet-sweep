@@ -194,7 +194,10 @@ export default function SwipePage() {
     error, 
     hasAttemptedFetch, 
     retry,
-    invalidateCacheAndRefetch 
+    invalidateCacheAndRefetch,
+    hasMore,
+    loadMore,
+    loadingMore
   } = useTokenBalances(account?.address);
   
   const {
@@ -297,8 +300,15 @@ export default function SwipePage() {
     token.symbol !== "USDC" &&
     token.symbol !== "USDbC"
   );
-  
 
+  // Check if we need to load more tokens
+  useEffect(() => {
+    // If we're within 3 tokens of the end and there are more tokens to load
+    if (hasMore && !loadingMore && currentTokenIndex >= swipeableTokens.length - 3) {
+      console.log('Loading more tokens...');
+      loadMore();
+    }
+  }, [currentTokenIndex, swipeableTokens.length, hasMore, loadingMore, loadMore]);
 
   const handleSwipeLeft = async () => {
     if (currentTokenIndex >= swipeableTokens.length) return;
@@ -424,7 +434,7 @@ export default function SwipePage() {
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-4">All Done!</h2>
                 <p className={`mb-6 ${theme.text.secondary}`}>
-                  You've reviewed all your tokens.
+                  You&apos;ve reviewed all your tokens.
                 </p>
                 <button
                   onClick={handleReset}
@@ -452,11 +462,24 @@ export default function SwipePage() {
           <div className="flex justify-between text-sm">
             <span className={theme.text.secondary}>
               {currentTokenIndex + 1} of {swipeableTokens.length}
+              {hasMore && (
+                <span className="ml-1 text-xs opacity-75">+ more loading...</span>
+              )}
             </span>
             <span className={theme.text.secondary}>
               Swipe left to sell, right to keep
             </span>
           </div>
+
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div className={`w-full py-3 rounded-2xl font-medium transition-colors relative ${theme.button.disabled}`}>
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Loading more tokens...
+              </div>
+            </div>
+          )}
 
           {/* Individual selling status */}
           {sellingToken && (

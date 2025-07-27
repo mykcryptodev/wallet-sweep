@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     
     // For now, just check if any cache exists for this wallet
     // In a real implementation, you might want to scan and show all cached pages
-    const key = cacheKeys.tokens(walletAddress, { page: 0, limit: 50, fetchAll: false });
+    const key = cacheKeys.tokens(walletAddress, { page: 0, limit: 50, minBalanceUSD: 0.01 });
     
     const exists = await cacheExists(key);
     const ttl = exists ? await getCacheTTL(key) : null;

@@ -12,6 +12,7 @@ A Farcaster mini app that allows users to easily batch sell multiple tokens from
 - ⚡ **Optimized Performance**: Includes caching, pagination, and parallel quote fetching
 - 🎨 **Beautiful UI**: Clean interface with loading states, error handling, and toast notifications
 - 🔄 **Real-time Updates**: Automatic balance refresh after successful transactions
+- 📊 **Zapper XYZ Integration**: Uses Zapper XYZ for comprehensive token balance data
 
 ## Farcaster Mini App Integration
 
@@ -30,6 +31,7 @@ See [docs/FARCASTER_MINIAPP_INTEGRATION.md](docs/FARCASTER_MINIAPP_INTEGRATION.m
 
 - Node.js 18+ and npm
 - A Thirdweb client ID (get one at [portal.thirdweb.com](https://portal.thirdweb.com/))
+- A Zapper XYZ API key (get one at [zapper.xyz](https://zapper.xyz/))
 
 ### Setup
 
@@ -50,7 +52,8 @@ cp .env.local.example .env.local
 ```
 
 Then edit `.env.local` and add your credentials:
-- `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` (required)
+- `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` (required for wallet connection)
+- `ZAPPER_API_KEY` (required for token balance fetching)
 - Redis credentials (optional, for caching)
 - 1inch API key (optional, for quote fetching)
 
@@ -78,6 +81,7 @@ Remember to:
 ## Technical Documentation
 
 - [Farcaster Mini App Integration](docs/FARCASTER_MINIAPP_INTEGRATION.md)
+- [Zapper XYZ Integration](docs/ZAPPER_XYZ_INTEGRATION.md)
 - [Caching System](docs/CACHING_SYSTEM.md)
 - [Token Image Cache](docs/TOKEN_IMAGE_CACHE.md)
 - [Pagination Implementation](docs/PAGINATION_IMPLEMENTATION.md)
@@ -88,6 +92,7 @@ Remember to:
 The app uses:
 - **Next.js 14** with App Router
 - **Thirdweb SDK** for Web3 functionality
+- **Zapper XYZ** for comprehensive token balance data
 - **Base Chain** for transactions
 - **Redis** for caching (optional)
 - **1inch API** for token quotes
