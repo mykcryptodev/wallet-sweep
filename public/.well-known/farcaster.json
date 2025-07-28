@@ -15,7 +15,8 @@
     "splashBackgroundColor": "#1a1a1a",
     "webhookUrl": "https://wallet-sweep.vercel.app/api/webhook",
     "screenshotUrls": [
-      "https://wallet-sweep.vercel.app/screenshot1.png"
+      "https://wallet-sweep.vercel.app/images/sell.png",
+      "https://wallet-sweep.vercel.app/images/keep.png"
     ],
     "primaryCategory": "finance",
     "tags": [
